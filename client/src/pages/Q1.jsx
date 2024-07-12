@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Layout } from "./Layout.jsx"
 import { Button, Card } from "flowbite-react";
 import { useSocket } from "../useSocket.jsx";
+import {Footer} from "@/components/Footer.jsx";
 
 export const Q1 = () => {
     const [poll, setPoll] = useState(null);
@@ -37,8 +38,8 @@ export const Q1 = () => {
     }
 
     return (
-        <Layout user={randomUser}>
-            <div className="w-full mx-auto p-8">
+        <Layout  user={randomUser}>
+            <div className="w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md">
                 <h1 className="text-2xl font-bold text-center">
                     {poll?.question ?? "Loading..."}
                 </h1>

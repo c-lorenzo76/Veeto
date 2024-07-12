@@ -25,40 +25,66 @@ function addUser(socket, next) {
 }
 
 const poll = {
-    question: "Vote for one of the best leader?",
+    question: "What is your current top priority for your meal?",
     options: [
         {
             id: 1,
-            text: "John",
-            votes: [],
+            text: "Ambiance",
+            votes:[],
         },
         {
             id: 2,
-            text: "Jane",
-            votes: [],
+            text: "Budget",
+            votes:[],
         },
         {
             id: 3,
-            text: "Raj",
-            votes: [],
+            text: "Cuisine",
+            votes:[],
         },
         {
             id: 4,
-            text: "Gina",
-            votes: [],
+            text: "Distance",
+            votes:[],
         },
-        {
-            id: 5,
-            text: "Sophia",
-            votes: [],
-        },
-        {
-            id: 6,
-            text: "Nina",
-            votes: [],
-        },
-    ],
-};
+    ]
+}
+
+// const poll = {
+//     question: "Vote for one of the best leader?",
+//     options: [
+//         {
+//             id: 1,
+//             text: "John",
+//             votes: [],
+//         },
+//         {
+//             id: 2,
+//             text: "Jane",
+//             votes: [],
+//         },
+//         {
+//             id: 3,
+//             text: "Raj",
+//             votes: [],
+//         },
+//         {
+//             id: 4,
+//             text: "Gina",
+//             votes: [],
+//         },
+//         {
+//             id: 5,
+//             text: "Sophia",
+//             votes: [],
+//         },
+//         {
+//             id: 6,
+//             text: "Nina",
+//             votes: [],
+//         },
+//     ],
+// };
 
 io.on("connection", (socket) => {
     console.log("a user connected", socket.data.user);
