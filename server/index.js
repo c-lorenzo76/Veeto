@@ -50,42 +50,6 @@ const poll = {
     ]
 }
 
-// const poll = {
-//     question: "Vote for one of the best leader?",
-//     options: [
-//         {
-//             id: 1,
-//             text: "John",
-//             votes: [],
-//         },
-//         {
-//             id: 2,
-//             text: "Jane",
-//             votes: [],
-//         },
-//         {
-//             id: 3,
-//             text: "Raj",
-//             votes: [],
-//         },
-//         {
-//             id: 4,
-//             text: "Gina",
-//             votes: [],
-//         },
-//         {
-//             id: 5,
-//             text: "Sophia",
-//             votes: [],
-//         },
-//         {
-//             id: 6,
-//             text: "Nina",
-//             votes: [],
-//         },
-//     ],
-// };
-
 io.on("connection", (socket) => {
     console.log("a user connected", socket.data.user);
 
