@@ -18,6 +18,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "flowbite-react": "^0.10.1",
+    "framer-motion": "^11.3.2",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.407.0",
     "react": "^18.3.1",
