@@ -2,6 +2,7 @@ const cors = require("cors");
 const express = require("express");
 const { Server } = require("socket.io");
 
+
 const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
 const server = require("http").createServer(app);
@@ -11,18 +12,6 @@ const io = new Server(server, {
         methods: ["GET", "POST"],
     },
 });
-
-io.use(addUser);
-
-function addUser(socket, next) {
-    const user = socket.handshake.auth.token;
-    if (user) {
-        try {
-            socket.data = { ...socket.data, user: user };
-        } catch (err) {}
-    }
-    next();
-}
 
 const poll = {
     question: "What is your current top priority for your meal?",
@@ -49,6 +38,20 @@ const poll = {
         },
     ]
 }
+
+io.use(addUser);
+
+function addUser(socket, next) {
+    const user = socket.handshake.auth.token;
+    if (user) {
+        try {
+            socket.data = { ...socket.data, user: user };
+        } catch (err) {}
+    }
+    next();
+}
+
+let lobbies = {};
 
 io.on("connection", (socket) => {
     console.log("a user connected", socket.data.user);

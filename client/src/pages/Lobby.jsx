@@ -2,6 +2,8 @@ import {User, Dot} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Footer} from "@/components/Footer";
 import { ChevronsLeft,ChevronsRight,Copy } from 'lucide-react';
+import {useMemo, useState} from "react";
+import {useSocket} from "@/useSocket.jsx";
 
 const users = [
     "Cristian Lorenzo-Pavon",
@@ -11,6 +13,36 @@ const users = [
 ]
 
 export const Lobby = () => {
+
+    const [lobby, setLobby] = useState(null);
+
+    const names = ["Alice", "Bailey", "Bridget", "Kia", "Sara", "Mia", "Grace", "Heidi", "Eva", "June"];
+
+    const randomUser = useMemo(() => {
+        const randomName = names[Math.floor(Math.random() * names.length)];
+        return `${randomName}`;
+    }, []);
+
+    const { socket, isConnected } = useSocket({
+        endpoint: `http://localhost:8000`,
+        token: randomUser,
+    });
+
+    // idk what i'm doing but fix this so that the joined users are the ones on different tabs
+
+    // {randomUser && !option.votes.includes(randomUser) ? (
+    //     <Button
+    //         className="bg-teal-500 hover:bg-teal-700 p-2 text-white"
+    //         onClick={() => handleVote(option.id)}
+    //     >
+    //         Vote
+    //     </Button>
+    // ) : (
+    //     <Button disabled className="bg-gray-700 text-white p-2">
+    //         Voted
+    //     </Button>
+    // )}
+
     return (
         <div className="flex flex-col min-h-screen">
             <div className="game-pin w-max mx-auto flex flex-col items-center p-8 bg-gray-100 mt-8">

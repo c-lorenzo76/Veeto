@@ -7,6 +7,7 @@ import {Footer} from "@/components/Footer.jsx";
 export const Q1 = () => {
     const [poll, setPoll] = useState(null);
 
+    const joined = [];
     const names = ["Alice", "Bailey", "Bridget", "Kia", "Sara", "Mia", "Grace", "Heidi", "Eva", "June"];
 
     const randomUser = useMemo(() => {
