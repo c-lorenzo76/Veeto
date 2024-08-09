@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import socketIOClient from 'socket.io-client';
 
 export function useSocket({ endpoint, token }) {
+
     const socket = socketIOClient(endpoint, {
         auth: {
             token: token

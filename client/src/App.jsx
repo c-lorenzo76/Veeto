@@ -5,18 +5,23 @@ import { Q1 } from "./pages/Q1";
 import { Create } from "./pages/Create";
 import { Join } from "./pages/Join";
 import { Lobby } from "./pages/Lobby";
+import { Questions } from "./pages/Questions";
+import { UserProvider } from "./UserContext.jsx"
 
 
 const App = () => {
     return(
         <BrowserRouter>
-            <Routes>
-                <Route index element={<Home />} />
-                <Route path={"Q1"} element={<Q1 />} />
-                <Route path={"Create"} element={<Create />} />
-                <Route path={"Join"} element={<Join />} />
-                <Route path={"Lobby"} element={<Lobby />} />
-            </Routes>
+            <UserProvider>
+                <Routes>
+                    <Route index element={<Home />} />
+                    <Route path={"Q1"} element={<Q1 />} />
+                    <Route path={"Create"} element={<Create />} />
+                    <Route path={"Join"} element={<Join />} />
+                    <Route path={"Lobby/:code"} element={<Lobby />} />
+                    <Route path={"Questions"} element={<Questions />} />
+                </Routes>
+            </UserProvider>
         </BrowserRouter>
     )
 
