@@ -57,8 +57,8 @@ export const Join = () => {
             setUser({ name, avatar: selectedAvatar });
             socket.emit("joinLobby", { lobbyCode: pin });
 
-            socket.on('joined', (code) => {
-                navigate(`/lobby/${code}`);
+            socket.on('joined', (code) => { // not even being used
+                navigate(`/Lobby/${code}`);
             });
 
             navigate(`/Lobby/${pin}`);

@@ -28,6 +28,8 @@ export const Lobby = () => {
             setIsHost(lobby.host === user.name);
         });
 
+        // why do I have two different socket things updating the same thing.
+        // which one even is the one actually updating the users
         socket.on('updateLobbyUsers', (users) => {
             setUsers(users);
         });
@@ -47,8 +49,10 @@ export const Lobby = () => {
     }, [code, user.name]);
 
     const handleStartGame = () => {
-        navigate('/Questions');
+        navigate(`/Questions/${code}`);
     };
+
+    console.log(code);
 
     return (
         <div className="flex flex-col min-h-screen">

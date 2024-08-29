@@ -19,7 +19,7 @@ const App = () => {
                     <Route path={"Create"} element={<Create />} />
                     <Route path={"Join"} element={<Join />} />
                     <Route path={"Lobby/:code"} element={<Lobby />} />
-                    <Route path={"Questions"} element={<Questions />} />
+                    <Route path={"Questions/:code"} element={<Questions />} />
                 </Routes>
             </UserProvider>
         </BrowserRouter>
