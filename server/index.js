@@ -120,7 +120,7 @@ io.on("connection", socket => {
                 host: lobby.host,
             });
 
-            io.to(lobbyCode).emit("userJoined", lobbyCode); // why am i passing the lobbyCode?? should be socket.data.user info check for any errors
+            io.to(lobbyCode).emit("lobbyJoined", lobbyCode); // why am i passing the lobbyCode?? should be socket.data.user info check for any errors
 
             console.log(`User ${socket.data.user} joined lobby ${lobbyCode}`);
         }
@@ -148,23 +148,35 @@ io.on("connection", socket => {
     });
 
     socket.on("getPollData", ({ lobbyCode }) => {
-        console.log("getPollData called with lobbyCode:", lobbyCode);
-        console.log("Current lobbies object:", lobbies);
 
         if (lobbies[lobbyCode]) {
             const lobby = lobbies[lobbyCode];
-            console.log("Lobby found:", lobby);
+
             console.log("Poll data:", lobby.poll);
             io.to(lobbyCode).emit("setPoll", {
                 questions: lobby.poll,
-            });
+            }); // Emit the poll data directly
 
             console.log(`Sent poll to lobby: ${lobbyCode}`);
         } else {
             console.log("Lobby not found for code:", lobbyCode);
-            socket.emit('Error', "Lobby not found");
+            socket.emit('Error', "Error with getting poll data");
         }
     });
+
+    socket.on("test", ({ lobbyCode }) => {
+        if (lobbies[lobbyCode]) {
+            const lobby = lobbies[lobbyCode];
+
+            io.to(lobbyCode).emit("getHost", {
+                host: lobby.host,
+            });
+            console.log("test worked");
+        }
+        else {
+            socket.emit('Error', "Trouble sending host")
+        }
+    })
 
     socket.on("disconnect", () =>{
         for (const [code, lobby] of Object.entries(lobbies)) {

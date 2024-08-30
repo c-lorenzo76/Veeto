@@ -1,10 +1,10 @@
-import {useState, useMemo, useEffect} from "react";
-import {Layout} from "./Layout.jsx"
-import {Button, Card} from "flowbite-react";
-import {useSocket} from "@/useSocket.jsx";
-import {useUser} from "@/UserContext.jsx";
-import {io} from "socket.io-client";
-import {useParams} from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { Layout } from "./Layout.jsx"
+import { io } from "socket.io-client";
+import { useParams } from "react-router-dom";
+import { useUser } from "@/UserContext.jsx";
+import { Button, Card } from "flowbite-react";
+import { useSocket } from "@/useSocket.jsx";
 
 
 export const Questions = () => {
@@ -12,8 +12,8 @@ export const Questions = () => {
     const [poll, setPoll] = useState(null);
     const [currentQuestion, setCurrentQuestion] = useState(0); // the index of the current question
     const {user} = useUser();
-    const [votes, setVotes] = useState({});
     const {code} = useParams();
+    const [votes, setVotes] = useState({});
 
 
     useEffect(() => {
@@ -21,19 +21,30 @@ export const Questions = () => {
             auth: {token: user.name},
         });
 
+        console.log("Connecting to socket with code:", code);
+
         socket.emit('getPollData', {lobbyCode: code});
 
-        socket.on('setPoll', (questions) => {
-            console.log(questions);
-            setPoll(questions);
+        socket.on('setPoll', (poll) => {
+            console.log(`This is the poll: ${poll}`);
+            setPoll(poll); // Directly setting the poll data
         });
 
+        socket.emit('test', {lobbyCode: code});
+
+        socket.on('getHost', (host) =>{
+            console.log(`host: ${host}`);
+        })
+
+        socket.on('Error', (error) =>{
+            console.log(`There was an error ${error}`);
+        });
 
         return () => {
-            socket.disconnect();
+            socket.disconnect(); // Clean up the socket connection
         };
 
-    }, [code]);
+    }, [code, user.name]);
 
 
 
@@ -41,10 +52,21 @@ export const Questions = () => {
     return (
         <Layout>
             <div className={"w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md"}>
-                <h1 className={"text-2xl font-bold text-center"}>
-
-
-                </h1>
+                {poll && (
+                    <>
+                        <h1 className={"text-2xl font-bold text-center"}>
+                            {poll[currentQuestion].question}
+                        </h1>
+                        <div className="mt-4">
+                            {poll[currentQuestion].options.map(option => (
+                                <Card key={option.id} className="mb-4">
+                                    <h5>{option.text}</h5>
+                                    <Button onClick={() => handleVote(option.id)}>Vote</Button>
+                                </Card>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         </Layout>
     )

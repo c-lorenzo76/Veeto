@@ -22,15 +22,15 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { ChevronRight, User, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { io } from "socket.io-client";
-import { useUser } from "@/UserContext";
+import { useSocket } from "@/SocketContext"
 import AvatarSelection from "@/components/AvatarSelection";
 
 export const Create = () => {
     const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [name, setName] = useState('');
     const navigate = useNavigate();
-    const { setUser } = useUser();
+    const { socket } = useSocket();
+
 
     const avatarSelect = (avatar) => {
         setSelectedAvatar(avatar);
@@ -39,17 +39,20 @@ export const Create = () => {
     const handleCreateLobby = () => {
         if (name.trim() === '') return;
 
-        setUser({ name, avatar: selectedAvatar });
+        console.log(`Name: ${name}`)
 
-        const socket = io('http://localhost:8000', {
-            auth: { token: name },
-        });
+        if(socket){
+            socket.auth = { token: name };
+            socket.connect();
 
-        socket.emit("createLobby");
+            socket.emit("createLobby");
 
-        socket.on('lobbyCreated', (code) => {
-            navigate(`/Lobby/${code}`);
-        });
+            socket.on('lobbyCreated', (code) => {
+                navigate(`/Lobby/${code}`);
+            });
+        } else {
+            console.error('Socket not initialized...')
+        }
     };
 
     return (

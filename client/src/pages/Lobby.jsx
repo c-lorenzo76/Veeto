@@ -1,31 +1,36 @@
 import { Button } from "@/components/ui/button";
 import { User, Dot, ChevronsLeft, ChevronsRight, Copy } from 'lucide-react';
 import { Footer } from "@/components/Footer";
+import { useSocket } from "@/SocketContext";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useUser } from "@/UserContext";
-import { io } from "socket.io-client";
 import { motion } from "framer-motion";
 
 export const Lobby = () => {
+    const { socket } = useSocket();
+    const { code } = useParams(); // Extract lobby code from the URL parameters
+    const navigate = useNavigate();
+
     const [users, setUsers] = useState([]);
     const [lobbyCode, setLobbyCode] = useState('');
     const [isHost, setIsHost] = useState(false);
-    const { code } = useParams(); // Extract lobby code from the URL parameters
-    const navigate = useNavigate();
-    const { user } = useUser();
+
+
 
     useEffect(() => {
-        const socket = io('http://localhost:8000', {
-            auth: { token: user.name },
-        });
+
+        if(!socket){
+            console.error('Socket in not initialized...');
+            return;
+        }
 
         socket.emit('updateLobby', { lobbyCode: code });
 
         socket.on("lobbyInfo", (lobby) => {
+            console.log(lobby);
             setLobbyCode(lobby.code);
             setUsers(lobby.users);
-            setIsHost(lobby.host === user.name);
+            setIsHost(lobby.host === socket.auth.token);
         });
 
         // why do I have two different socket things updating the same thing.
@@ -42,17 +47,12 @@ export const Lobby = () => {
             setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
         });
 
-        return () => {
-            socket.disconnect();
-        };
 
-    }, [code, user.name]);
+    }, [code, socket]);
 
     const handleStartGame = () => {
         navigate(`/Questions/${code}`);
     };
-
-    console.log(code);
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -130,15 +130,15 @@ export const Lobby = () => {
                 <ChevronsRight/>
             </div>
             <div className="joined-users flex-grow flex flex-col">
-                    <div className="m-10 mx-auto gap-8 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                        {users.map((user, index) => (
-                            <div key={index} className="flex items-center justify-center p-4 text-2xl font-semibold">
-                                {user}
-                            </div>
-                        ))}
-                    </div>
+                <div className="m-10 mx-auto gap-8 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                    {users.map((user, index) => (
+                        <div key={index} className="flex items-center justify-center p-4 text-2xl font-semibold">
+                            {user}
+                        </div>
+                    ))}
                 </div>
-                <Footer/>
+            </div>
+            <Footer/>
         </div>
-);
+    );
 };

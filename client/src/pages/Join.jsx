@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -27,18 +26,20 @@ import {
 } from "@/components/ui/dialog.jsx";
 import { Plus, User, Merge } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import AvatarSelection from "@/components/AvatarSelection";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@/UserContext";
-import { io } from "socket.io-client";
+import { useSocket } from "@/SocketContext";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
+
 
 export const Join = () => {
     const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [name, setName] = useState('');
-    const [pin, setPin] = useState(''); // Store the pin as a single string
-    const { setUser } = useUser();
+    const [pin, setPin] = useState('');
     const navigate = useNavigate();
+    const { socket, connectSocket } = useSocket();
+
 
     const avatarSelect = (avatar) => {
         setSelectedAvatar(avatar);
@@ -49,21 +50,12 @@ export const Join = () => {
         console.log("lobby-code: ", pin);
 
         if (name && pin) {
-            const socket = io('http://localhost:8000', {
-                auth: { token: name },
-            });
-
-            // Set user context and navigate to Lobby page
-            setUser({ name, avatar: selectedAvatar });
+            connectSocket(name);
             socket.emit("joinLobby", { lobbyCode: pin });
 
-            socket.on('joined', (code) => { // not even being used
-                navigate(`/Lobby/${code}`);
+            socket.on('lobbyJoined', () => {
+               navigate(`/Lobby/${pin}`);
             });
-
-            navigate(`/Lobby/${pin}`);
-        } else {
-            alert("Please enter both your name and the pin.");
         }
     };
 
