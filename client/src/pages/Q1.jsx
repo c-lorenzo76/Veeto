@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { Layout } from "./Layout.jsx"
 import { Button, Card } from "flowbite-react";
 import { useSocket } from "../useSocket.jsx";
-import {Footer} from "@/components/Footer.jsx";
 
 export const Q1 = () => {
     const [poll, setPoll] = useState(null);

@@ -15,10 +15,10 @@ const Footer = () => {
     )
 }
 
-export const Layout = ({children, user}) => {
+export const Layout = ({children, user, avatar}) => {
     return (
         <div className="p-8">
-            <Navbar children={children} user={user}/>
+            <Navbar children={children} user={user} avatar={avatar}/>
             <div className="grid place-items-center mt-8">{children}</div>
             <Footer/>
             <Outlet/>

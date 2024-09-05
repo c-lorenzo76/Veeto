@@ -22,9 +22,9 @@ export const SocketProvider = ({ children }) => {
         };
     }, []);
 
-    const connectSocket = (token) => {
+    const connectSocket = (token, avatar) => {
         if (socket) {
-            socket.auth = { token };
+            socket.auth = { token: token, avatar: avatar };
             socket.connect();
         }
     };

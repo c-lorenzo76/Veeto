@@ -42,7 +42,7 @@ export const Create = () => {
         console.log(`Name: ${name}`)
 
         if(socket){
-            socket.auth = { token: name };
+            socket.auth = { token: name, avatar: selectedAvatar  };
             socket.connect();
 
             socket.emit("createLobby");

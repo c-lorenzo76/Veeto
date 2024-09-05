@@ -20,9 +20,10 @@ function generateCode(){
 
 io.use((socket, next) => {
     const user = socket.handshake.auth.token;
+    const avatar = socket.handshake.auth.avatar;
     if(user){
         try{
-            socket.data = { ... socket.data, user: user };
+            socket.data = { ... socket.data, user: user, avatar: avatar };
         } catch(err) {}
     }
     next();
@@ -155,7 +156,7 @@ io.on("connection", socket => {
             console.log("Poll data:", lobby.poll);
             io.to(lobbyCode).emit("setPoll", {
                 questions: lobby.poll,
-            }); // Emit the poll data directly
+            });
 
             console.log(`Sent poll to lobby: ${lobbyCode}`);
         } else {
@@ -164,19 +165,11 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on("test", ({ lobbyCode }) => {
-        if (lobbies[lobbyCode]) {
-            const lobby = lobbies[lobbyCode];
-
-            io.to(lobbyCode).emit("getHost", {
-                host: lobby.host,
-            });
-            console.log("test worked");
-        }
-        else {
-            socket.emit('Error', "Trouble sending host")
-        }
+    socket.on("startGame", ({ lobbyCode }) => {
+        io.to(lobbyCode).emit("gameStarted")
     })
+
+
 
     socket.on("disconnect", () =>{
         for (const [code, lobby] of Object.entries(lobbies)) {

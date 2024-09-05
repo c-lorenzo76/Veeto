@@ -8,7 +8,7 @@ import ironMan from '../assets/avatar-pfp/IronMan.svg';
 import sailorCat from '../assets/avatar-pfp/Sailor-Cat.svg';
 import wolverine from "../assets/avatar-pfp/Wolverine.svg";
 
-export function Navbar({ user }){
+export function Navbar({ user, avatar }){
 
     const avatars = {
         Alien: alien,
@@ -43,7 +43,7 @@ export function Navbar({ user }){
                     <span className="mr-4 text-lg">{user}</span>
                     <img
                         alt="User settings"
-                        src={randomAvatar}
+                        src={avatar}
                         className="rounded-full h-10 w-10"
                     />
                 </div>

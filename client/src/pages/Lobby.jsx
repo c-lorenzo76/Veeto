@@ -33,25 +33,15 @@ export const Lobby = () => {
             setIsHost(lobby.host === socket.auth.token);
         });
 
-        // why do I have two different socket things updating the same thing.
-        // which one even is the one actually updating the users
-        socket.on('updateLobbyUsers', (users) => {
-            setUsers(users);
-        });
-
-        socket.on("userJoined", (newPlayer) => {
-            setUsers((prevState) => [...prevState, newPlayer]);
-        });
-
-        socket.on("userDisconnect", (discPlayer) => {
-            setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
-        });
+        socket.on('gameStarted', () => {
+            navigate(`/Questions/${code}`);
+        })
 
 
     }, [code, socket]);
 
     const handleStartGame = () => {
-        navigate(`/Questions/${code}`);
+        socket.emit('startGame', { lobbyCode: code });
     };
 
     return (
@@ -142,3 +132,17 @@ export const Lobby = () => {
         </div>
     );
 };
+
+// why do I have two different socket things updating the same thing.
+// which one even is the one actually updating the users
+// socket.on('updateLobbyUsers', (users) => {
+//     setUsers(users);
+// });
+//
+// socket.on("userJoined", (newPlayer) => {
+//     setUsers((prevState) => [...prevState, newPlayer]);
+// });
+//
+// socket.on("userDisconnect", (discPlayer) => {
+//     setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+// });

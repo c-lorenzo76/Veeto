@@ -50,7 +50,7 @@ export const Join = () => {
         console.log("lobby-code: ", pin);
 
         if (name && pin) {
-            connectSocket(name);
+            connectSocket(name, selectedAvatar);
             socket.emit("joinLobby", { lobbyCode: pin });
 
             socket.on('lobbyJoined', () => {
