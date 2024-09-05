@@ -13,9 +13,12 @@ Then check Veeto on localhost:5173
     >   - Fix the Select component for language
     >   - Get rid of css file and add the styling into the tags
 > * Complete Lobby page:
-    >   -  Fix the users names it's too sloppy and all over the place: view comments left behind
-> * Edit Q1 Page:
-    >   - Going to have to figure out how to create rooms using websockets and then figure out how to do procedural questions for the poll. 
+    > -  Style it better looks hideous.
+    > -  Maybe style the names to have it like agario to show the pfp
+    > -  Add leave functionality and kick for host
+    > -  Fix how it looks on mobile devices
+> * Edit Questions Page:
+    >   - Going to have to figure out how to do multistep form for questions on the poll. 
 
 ## React + Vite
 Currently, two official plugins are available:

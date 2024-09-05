@@ -1,86 +1,128 @@
-import {User, Dot} from "lucide-react";
-import {Button} from "@/components/ui/button";
-import {Footer} from "@/components/Footer";
-import { ChevronsLeft,ChevronsRight,Copy } from 'lucide-react';
-import {useMemo, useState} from "react";
-import {useSocket} from "@/useSocket.jsx";
-
-const users = [
-    "Cristian Lorenzo-Pavon",
-    "Maria M Pavon",
-    "Batman Lorenzo-Pavon",
-    "Luna Lorenzo-Pavon"
-]
+import { Button } from "@/components/ui/button";
+import { User, Dot, ChevronsLeft, ChevronsRight, Copy } from 'lucide-react';
+import { Footer } from "@/components/Footer";
+import { useSocket } from "@/SocketContext";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 
 export const Lobby = () => {
+    const { socket } = useSocket();
+    const { code } = useParams(); // Extract lobby code from the URL parameters
+    const navigate = useNavigate();
 
-    const [lobby, setLobby] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [lobbyCode, setLobbyCode] = useState('');
+    const [isHost, setIsHost] = useState(false);
 
-    const names = ["Alice", "Bailey", "Bridget", "Kia", "Sara", "Mia", "Grace", "Heidi", "Eva", "June"];
 
-    const randomUser = useMemo(() => {
-        const randomName = names[Math.floor(Math.random() * names.length)];
-        return `${randomName}`;
-    }, []);
 
-    const { socket, isConnected } = useSocket({
-        endpoint: `http://localhost:8000`,
-        token: randomUser,
-    });
+    useEffect(() => {
 
-    // idk what i'm doing but fix this so that the joined users are the ones on different tabs
+        if(!socket){
+            console.error('Socket in not initialized...');
+            return;
+        }
 
-    // {randomUser && !option.votes.includes(randomUser) ? (
-    //     <Button
-    //         className="bg-teal-500 hover:bg-teal-700 p-2 text-white"
-    //         onClick={() => handleVote(option.id)}
-    //     >
-    //         Vote
-    //     </Button>
-    // ) : (
-    //     <Button disabled className="bg-gray-700 text-white p-2">
-    //         Voted
-    //     </Button>
-    // )}
+        socket.emit('updateLobby', { lobbyCode: code });
+
+        socket.on("lobbyInfo", (lobby) => {
+            console.log(lobby);
+            setLobbyCode(lobby.code);
+            setUsers(lobby.users);
+            setIsHost(lobby.host === socket.auth.token);
+        });
+
+        socket.on('gameStarted', () => {
+            navigate(`/Questions/${code}`);
+        })
+
+
+    }, [code, socket]);
+
+    const handleStartGame = () => {
+        socket.emit('startGame', { lobbyCode: code });
+    };
 
     return (
         <div className="flex flex-col min-h-screen">
-            <div className="game-pin w-max mx-auto flex flex-col items-center p-8 bg-gray-100 mt-8">
-                <h1 className="flex items-center justify-center text-2xl font-bold">
-                    PIN: 752 8182
-                    <Copy className={"ml-2"} />
-                </h1>
-            </div>
+            <motion.div
+                initial={{opacity: 0.0, y: 40}}
+                whileInView={{opacity: 1, y: 0}}
+                transition={{
+                    delay: 0.3,
+                    duration: 0.95,
+                    ease: "easeInOut",
+                }}
+            >
+                <div className="game-pin w-max mx-auto flex flex-col items-center p-8 bg-gray-100 mt-8">
+                    <h1 className="flex items-center justify-center text-2xl font-bold">
+                        PIN: {lobbyCode || 'Loading...'}
+                        <Copy className={"ml-2"}/>
+                    </h1>
+                </div>
+            </motion.div>
             <div className="sub-nav w-full m-8 grid grid-cols-3 mx-auto items-center">
-                <div className="players-joined flex justify-center items-center">
-                    <Button>
-                        <Dot size={24} className="mr-2 text-red-500"/>
-                        <span>0</span>
-                        <User size={24} className="ml-2"/>
-                    </Button>
-                </div>
-                <div className="veto-title flex justify-center items-center">
-                    <h1 className="text-5xl font-bold bg-transparent text:shadow-lg">Veeto</h1>
-                </div>
-                <div className="start-button flex justify-center items-center">
-                    <Button className="bg-yellow-500 hover:bg-yellow-300 text-black px-8">
-                        Start
-                    </Button>
-                </div>
+                <motion.div
+                    initial={{opacity: 0.0, x: -40}}
+                    whileInView={{opacity: 1, x: 0}}
+                    transition={{
+                        delay: 0.3,
+                        duration: 0.95,
+                        ease: "easeInOut",
+                    }}
+                >
+                    <div className="players-joined flex justify-center items-center">
+                        <Button>
+                            <Dot size={24} className="mr-2 text-red-500"/>
+                            <span>{users.length}</span>
+                            <User size={24} className="ml-2"/>
+                        </Button>
+                    </div>
+                </motion.div>
+                <motion.div
+                    initial={{opacity: 0.0, y: -40}}
+                    whileInView={{opacity: 1, y: 0}}
+                    transition={{
+                        delay: 0.3,
+                        duration: 0.95,
+                        ease: "easeInOut",
+                    }}
+                >
+                    <div className="veto-title flex justify-center items-center">
+                        <h1 className="text-5xl font-bold bg-transparent text:shadow-lg">Veeto</h1>
+                    </div>
+                </motion.div>
+                <motion.div
+                    initial={{opacity: 0.0, x: 40}}
+                    whileInView={{opacity: 1, x: 0}}
+                    transition={{
+                        delay: 0.3,
+                        duration: 0.95,
+                        ease: "easeInOut",
+                    }}
+                >
+                    <div className="start-button flex justify-center items-center">
+                        {isHost && (
+                            <Button
+                                className="bg-yellow-500 hover:bg-yellow-300 text-black px-8"
+                                onClick={handleStartGame}
+                            >
+                                Start
+                            </Button>
+                        )}
+                    </div>
+                </motion.div>
             </div>
             <div className="flex border-t-2 justify-center items-center p-5 space-x-2">
-                <ChevronsLeft />
+                <ChevronsLeft/>
                 <h2 className="mt text-2xl text-center font-bold">Joined users</h2>
-                <ChevronsRight />
+                <ChevronsRight/>
             </div>
-            {/*An improved version i can do of this is to make a div of a certain width and
-            then make the small have grid-cols-3 and md:grids-cols-4. Since the width of the div is smaller it will work fine
-            just justify-center and the items-center the names.
-            */}
             <div className="joined-users flex-grow flex flex-col">
-                <div className="m-10 mx-auto gap-8 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ">
+                <div className="m-10 mx-auto gap-8 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     {users.map((user, index) => (
-                        <div key={index} className="flex items-center justify-center p-4 text-2xl font-semibold ">
+                        <div key={index} className="flex items-center justify-center p-4 text-2xl font-semibold">
                             {user}
                         </div>
                     ))}
@@ -90,3 +132,17 @@ export const Lobby = () => {
         </div>
     );
 };
+
+// why do I have two different socket things updating the same thing.
+// which one even is the one actually updating the users
+// socket.on('updateLobbyUsers', (users) => {
+//     setUsers(users);
+// });
+//
+// socket.on("userJoined", (newPlayer) => {
+//     setUsers((prevState) => [...prevState, newPlayer]);
+// });
+//
+// socket.on("userDisconnect", (discPlayer) => {
+//     setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+// });
