@@ -1,10 +1,11 @@
 # Veeto
 
 ## Motivation
-The inspiration for Veeto was sparked after multiple encounters where my partner and I 
-could not decide on what to eat. We spend a good amount of time choosing and second guessing our option. Since we're so indecisive I figured I could make an website to help 
-us. When looking online I couldn't find anything that would not do what Google already does which is listing the nearest places we could eat. We need someone to decide for us 
-based on our input and I hope that others could find this useful as well. 
+Veeto was inspired by the many instances when my partner and I struggled to decide where to eat, 
+often spending more time second-guessing our options than enjoying a meal. 
+Our indecisiveness led me to create a solution—a website designed to help simplify the decision-making process. 
+Unlike existing tools that merely list nearby restaurants, Veeto takes user preferences into account to make a tailored recommendation. 
+My goal is for others who face the same dilemma to find this platform just as helpful.
 
 ## Tech Stack
 > Javascript | 
