@@ -1,14 +1,14 @@
-import { Button } from "@/components/ui/button";
-import { User, Dot, ChevronsLeft, ChevronsRight, Copy } from 'lucide-react';
-import { Footer } from "@/components/Footer";
-import { useSocket } from "@/SocketContext";
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import {Button} from "@/components/ui/button";
+import {User, Dot, ChevronsLeft, ChevronsRight, Copy} from 'lucide-react';
+import {Footer} from "@/components/Footer";
+import {useSocket} from "@/SocketContext";
+import {useState, useEffect} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {motion} from "framer-motion";
 
 export const Lobby = () => {
-    const { socket } = useSocket();
-    const { code } = useParams(); // Extract lobby code from the URL parameters
+    const {socket} = useSocket();
+    const {code} = useParams(); // Extract lobby code from the URL parameters
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
@@ -16,15 +16,14 @@ export const Lobby = () => {
     const [isHost, setIsHost] = useState(false);
 
 
-
     useEffect(() => {
 
-        if(!socket){
+        if (!socket) {
             console.error('Socket in not initialized...');
             return;
         }
 
-        socket.emit('updateLobby', { lobbyCode: code });
+        socket.emit('updateLobby', {lobbyCode: code});
 
         socket.on("lobbyInfo", (lobby) => {
             console.log(lobby);
@@ -35,13 +34,27 @@ export const Lobby = () => {
 
         socket.on('gameStarted', () => {
             navigate(`/Questions/${code}`);
-        })
+        });
+
+        // why do I have two different socket things updating the same thing.
+        // which one even is the one actually updating the users
+        socket.on('updateLobbyUsers', (users) => {
+            setUsers(users);
+        });
+
+        socket.on("userJoined", (newPlayer) => {
+            setUsers((prevState) => [...prevState, newPlayer]);
+        });
+
+        socket.on("userDisconnect", (discPlayer) => {
+            setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+        });
 
 
     }, [code, socket]);
 
     const handleStartGame = () => {
-        socket.emit('startGame', { lobbyCode: code });
+        socket.emit('startGame', {lobbyCode: code});
     };
 
     return (
@@ -58,7 +71,22 @@ export const Lobby = () => {
                 <div className="game-pin w-max mx-auto flex flex-col items-center p-8 bg-gray-100 mt-8">
                     <h1 className="flex items-center justify-center text-2xl font-bold">
                         PIN: {lobbyCode || 'Loading...'}
-                        <Copy className={"ml-2"}/>
+                        <Copy className={"ml-2 cursor-pointer"}
+                              onClick={ () => {
+                                  if(lobbyCode) {
+                                      navigator.clipboard.writeText(lobbyCode)
+                                          .then(() => {
+                                              alert('PIN copied to clipboard!');
+                                          })
+                                          .catch((err) => {
+                                              console.error('Failed to copy: ', err);
+                                              alert('Failed to copy PIN.');
+                                          });
+                                      ;
+
+                                  }
+                              } }
+                        />
                     </h1>
                 </div>
             </motion.div>
@@ -120,29 +148,25 @@ export const Lobby = () => {
                 <ChevronsRight/>
             </div>
             <div className="joined-users flex-grow flex flex-col">
+
                 <div className="m-10 mx-auto gap-8 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     {users.map((user, index) => (
-                        <div key={index} className="flex items-center justify-center p-4 text-2xl font-semibold">
-                            {user}
-                        </div>
+                        <motion.div
+                            initial={{opacity: 0, scale: 0.5}}
+                            animate={{opacity: 1, scale: 1}}
+                            transition={{duration: 0.95}}
+                        >
+                            <div key={index}
+                                 className="flex items-center justify-center p-4 text-2xl font-semibold">
+                                {user}
+                            </div>
+                        </motion.div>
+
                     ))}
                 </div>
+
             </div>
             <Footer/>
         </div>
     );
 };
-
-// why do I have two different socket things updating the same thing.
-// which one even is the one actually updating the users
-// socket.on('updateLobbyUsers', (users) => {
-//     setUsers(users);
-// });
-//
-// socket.on("userJoined", (newPlayer) => {
-//     setUsers((prevState) => [...prevState, newPlayer]);
-// });
-//
-// socket.on("userDisconnect", (discPlayer) => {
-//     setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
-// });
