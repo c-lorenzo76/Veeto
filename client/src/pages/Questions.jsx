@@ -3,6 +3,7 @@ import { Layout } from "./Layout.jsx"
 import { useParams } from "react-router-dom";
 import { Button, Card } from "flowbite-react";
 import { useSocket } from "@/SocketContext";
+import { Progress } from "@/components/ui/progress";
 
 
 export const Questions = () => {
@@ -64,7 +65,11 @@ export const Questions = () => {
 
     return (
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
-            <div className={"w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md"}>
+            <div className={"w-full bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center justify-center"}>
+                <Progress value={33} className={""} />
+                <p className={"ml-1 "}>33%</p>
+            </div>
+            <div className={"w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md "}>
                 {poll && (
                     <>
                         <h1 className={"text-2xl font-bold text-center"}>

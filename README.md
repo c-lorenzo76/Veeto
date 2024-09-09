@@ -1,7 +1,10 @@
-# Veeto
+<p align="center">
+    <h1 align="center" style="font-family: 'Poppins', sans-serif; text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);">Veeto</h1>
+    <br>
+</p>
 
-## Motivation
-Veeto was inspired by the many instances when my partner and I struggled to decide where to eat, 
+## Background
+Veeto was inspired by the many occurrences where my partner and I struggled to decide where to eat, 
 often spending more time second-guessing our options than enjoying a meal. 
 Our indecisiveness led me to create a solution—a website designed to help simplify the decision-making process. 
 Unlike existing tools that merely list nearby restaurants, Veeto takes user preferences into account to make a tailored recommendation. 
@@ -28,6 +31,24 @@ You can install the project using the following command
 git clone https://github.com/c-lorenzo76/Poll.git
 ```
 
+## Start the server
+In terminal run the commands to start the server, 
+and it will run on localhost:8000
+```
+cd server
+pnpm i 
+npm start
+```
+
+## Start the client
+The open another terminal, navigate to client folder and run the following commands,
+it will run on localhost:5173
+```
+cd client
+pnpm i
+pnpm run dev
+```
+
 ### Issues
 
 09/04 <br>
@@ -36,6 +57,20 @@ implementation. After I need to adjust it to become a multi step form. Once thos
 I can make it show the results from the poll. Have it display places to eat according to the responses 
 May need to create a new Google account to be able to make requests based off coordinates or see other 
 API uses. Maybe don't even need that an could use TripAdvisor API.
+Warning: Each child in a list should have a unique "key" prop.
+
+error for something idk what
+
+Check the render method of `Lobby`. See https://reactjs.org/link/warning-keys for more information.
+MotionComponent@http://localhost:5173/node_modules/.vite/deps/framer-motion.js:475:40
+Lobby@http://localhost:5173/src/pages/Lobby.jsx:27:31
+SocketProvider@http://localhost:5173/src/SocketContext.jsx:22:5
+RenderedRoute@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js:4011:32
+Routes@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js:4444:19
+UserProvider@http://localhost:5173/src/UserContext.jsx:26:6
+Router@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js:4387:28
+BrowserRouter@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js:5132:26
+App
 
 08/30 <br>
 Okay I believe I fixed the issue with navigating and maintaining the connection of the socket. Had some issues resolving that but now I am able to continue 

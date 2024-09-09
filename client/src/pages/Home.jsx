@@ -65,7 +65,7 @@ export const Home = () => {
                                 ease: "easeInOut",
                             }}
                         >
-                            <h1 className="text-5xl font-semibold">
+                            <h1 className="text-5xl">
                                 Veeto
                             </h1>
                         </motion.div>

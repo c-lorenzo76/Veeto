@@ -73,7 +73,7 @@ export const Join = () => {
                 <Card className="w-full max-w-sm bg-gray-50">
                     <CardHeader>
                         <CardTitle className="text-5xl flex justify-center">
-                            Join
+                            join
                         </CardTitle>
                         <CardDescription className="text-center text-md">
                             Enter your name below to be displayed to others and the pin provided by the host
