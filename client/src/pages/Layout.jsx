@@ -2,7 +2,7 @@ import "../index.css";
 import React from "react"
 import { Outlet } from "react-router-dom";
 import { Navbar } from "../components/navbar.jsx";
-import {Copyright} from "lucide-react";
+import { Copyright } from "lucide-react";
 
 const Footer = () => {
     return (

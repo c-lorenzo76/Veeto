@@ -51,6 +51,19 @@ pnpm run dev
 
 ### Issues
 
+09/09 <br>
+I still have to finish the Questions.jsx with the voting feature. 
+Found a temp solution to the player count but has problems when
+a user disconnects as it does not update. Did a minor 
+change to use the disconnect that is already in index.js but for 
+some reason it would also pass onto the lobby.jsx so it would remove it twice? Was acting off. 
+Might have to make two different disconnects?? I think i just need a better way of checking for user count,
+maybe actually store all the the users and then just use length similar to lobbyinfo. 
+I need to also adjust the Lobby.jsx sockets or just the sockets in general. 
+Figure out how to have it run only when required I have that shit constantly 
+emitting. Still continuing to have teh issue in Lobby.jsx with that long error check 
+if motion has anything to do with it. START TO PUT IT ONTO A SERVER BY END OF WEAK PLEASE. 
+
 09/04 <br>
 I fixed the issue of only the host being redirected to Questions page. I now need to add the voting
 implementation. After I need to adjust it to become a multi step form. Once those two things are in play 
