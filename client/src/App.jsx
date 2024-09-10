@@ -6,7 +6,6 @@ import {Create} from "./pages/Create";
 import {Join} from "./pages/Join";
 import {Lobby} from "./pages/Lobby";
 import {Questions} from "./pages/Questions";
-import {UserProvider} from "./UserContext"
 import {SocketProvider} from "./SocketContext";
 
 

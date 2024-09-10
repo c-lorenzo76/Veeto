@@ -21,12 +21,6 @@ export function Navbar({ user, avatar }){
         Wolverine: wolverine,
     };
 
-    const randomAvatar = useMemo(() => {
-        const avatarKeys = Object.keys(avatars);
-        const randomKey = avatarKeys[Math.floor(Math.random() * avatarKeys.length)];
-        return avatars[randomKey];
-    }, []);
-
     const Navigation = ({ children }) => (
         <nav className="flex items-center justify-between p-5 bg-gray-50 rounded-3xl">{children}</nav>
     );
