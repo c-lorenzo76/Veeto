@@ -186,20 +186,15 @@ io.on("connection", socket => {
             return socket.emit('Error', "Error with vote, no lobby");
         }
 
-        console.log(lobby);
+        // gets the poll question
+        // console.log(lobby.poll[currentQuestion]);
 
-        // const question = lobby.questions.find((q) => q.id === currentQuestion);
-        // const option = question.options.find((o) => o.id === optionId);
-        // console.log(question);
-        // console.log(option);
-        //
-        // if(!option.votes.includes(socket.data.user)){
-        //     option.votes.push(socket.data.user);
-        // }
-        //
-        // io.to(lobbyCode).emit("setPoll", {
-        //     questions: lobbies[lobbyCode].poll,
-        // })
+        // gets the answers
+        // console.log(lobby.poll[currentQuestion].options[optionId - 1]);
+
+        // gets the answers vote
+        // console.log(lobby.poll[currentQuestion].options[optionId - 1].votes)
+
 
     });
 

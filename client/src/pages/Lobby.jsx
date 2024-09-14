@@ -17,7 +17,6 @@ export const Lobby = () => {
 
 
     useEffect(() => {
-
         if (!socket) {
             console.error('Socket in not initialized...');
             return;
@@ -26,7 +25,6 @@ export const Lobby = () => {
         socket.emit('updateLobby', {lobbyCode: code});
 
         socket.on("lobbyInfo", (lobby) => {
-            console.log(lobby);
             setLobbyCode(lobby.code);
             setUsers(lobby.users);
             setIsHost(lobby.host === socket.auth.token);
@@ -40,8 +38,6 @@ export const Lobby = () => {
             setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
             console.log(discPlayer, "Disconnected")
         });
-
-
     }, [code, socket]);
 
     const handleStartGame = () => {

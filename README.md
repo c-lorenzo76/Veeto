@@ -49,7 +49,22 @@ npm i
 npm run dev
 ```
 
-### Issues
+### Updates
+09/13 <br>
+I followed on the approach of having 'lobbyInfo' to be able to update 'users'. 
+Then that's how I kept track of the users connected since I would just use 
+'users.length'. Then I added the 'userDisconnect' from 'Lobby.jsx' for when
+a user disconnects from the socket. I've also managed to pull the information
+for 'vote' on the backend via the parameters, so I can manage to move onto voting.
+The thing I can see that I would struggle would be keeping track of everyone in the
+'users' that have voted to then proceed to the next question. Once I get the question
+tracking working I should focus on the progress bar as well. Then in the meantime while
+I figure out how to make it display the searches based on the results. Oh, btw
+check how to fix the error that I still keep getting in the 'Lobby.jsx'. Then
+also view how to make not many socket requests only when needed. The 'lobbyInfo' 
+for example makes a lot of rq when just one person is in the lobby. On a larger scale
+this could make it expensive especially on the cloud. 
+
 
 09/09 <br>
 I still have to finish the Questions.jsx with the voting feature. 
@@ -58,7 +73,7 @@ a user disconnects as it does not update. Did a minor
 change to use the disconnect that is already in index.js but for 
 some reason it would also pass onto the lobby.jsx so it would remove it twice? Was acting off. 
 Might have to make two different disconnects?? I think i just need a better way of checking for user count,
-maybe actually store all the the users and then just use length similar to lobbyinfo. 
+maybe actually store all the users and then just use length similar to lobbyinfo. 
 I need to also adjust the Lobby.jsx sockets or just the sockets in general. 
 Figure out how to have it run only when required I have that shit constantly 
 emitting. Still continuing to have teh issue in Lobby.jsx with that long error check 

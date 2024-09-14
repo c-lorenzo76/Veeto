@@ -11,10 +11,10 @@ export const Questions = () => {
     const { socket } = useSocket();
     const { code} = useParams();
 
-    let[ totalUsers, setTotalUsers ] = useState(0);
+    const [users, setUsers] = useState([]);
     const [poll, setPoll] = useState(null);
     const [currentQuestion, setCurrentQuestion] = useState(0); // the index of the current question
-    const [votes, setVotes] = useState({});
+
 
     if(!socket){
         console.error('Socket is not initialized..');
@@ -23,22 +23,25 @@ export const Questions = () => {
 
     useEffect(() => {
 
-        // retrieves the poll data
+        // retrieves and sets the poll data
         socket.emit('getPollData', {lobbyCode: code});
-        socket.emit('getTotalUsers', {lobbyCode: code});
-
-        // sets the poll data
         socket.on('setPoll', (poll) => {
             // console.log(`Poll: ${JSON.stringify(poll, null, 2)}`);
             console.log(`Questions: ${JSON.stringify(poll,null, 1)}`);
             setPoll(poll);
         });
 
-        socket.on('setTotalUsers', (total) => {
-           console.log(total);
-           setTotalUsers(total);
+        // Gets lobbyUsers
+        socket.emit('updateLobby', {lobbyCode: code});
+        socket.on("lobbyInfo", (lobby) => {
+            console.log('lobby info');
+            setUsers(lobby.users)
         });
 
+        socket.on("userDisconnect", (discPlayer) => {
+            setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+            console.log(discPlayer, "Disconnected")
+        });
 
         socket.on('Error', (error) => {
             console.log(`There was an error ${error}`);
@@ -110,7 +113,7 @@ export const Questions = () => {
                                         </div>
 
                                         <div className={"absolute top-3 right-5 p-2 text-sm font-semibold bg-gray-700 text-white rounded-lg z-10"}>
-                                            {totalVotes} / {totalUsers}{/* need to change the 0 to be the amount of players in the game*/}
+                                            {totalVotes} / {users.length}{/* need to change the 0 to be the amount of players in the game*/}
                                         </div>
                                         <div
                                             className={"absolute bottom-0 inset-x-0 bg-gray-200 rounded-md overflow-hidden h-4"}
