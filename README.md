@@ -28,7 +28,7 @@ My goal is for others who face the same dilemma to find this platform just as he
 ## Installation
 You can install the project using the following command
 ```
-git clone https://github.com/c-lorenzo76/Poll.git
+git clone https://github.com/c-lorenzo76/Veeto.git
 ```
 
 ## Start the server
@@ -48,6 +48,12 @@ cd client
 npm i
 npm run dev
 ```
+
+## Landing Page
+![landing_page.jpg](./client/public/landing_page.jpg)
+
+
+
 
 ### Updates
 09/13 <br>
