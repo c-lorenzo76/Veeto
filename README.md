@@ -36,7 +36,7 @@ In terminal run the commands to start the server,
 and it will run on localhost:8000
 ```
 cd server
-pnpm i 
+npm i 
 npm start
 ```
 
@@ -45,8 +45,8 @@ The open another terminal, navigate to client folder and run the following comma
 it will run on localhost:5173
 ```
 cd client
-pnpm i
-pnpm run dev
+npm i
+npm run dev
 ```
 
 ### Issues
