@@ -155,6 +155,7 @@ io.on("connection", socket => {
         if (lobbies[lobbyCode]) {
             const lobby = lobbies[lobbyCode];
 
+            // want to know if I can just send it without doing 'questions:' bc it sets an array in another array for no reason
             io.to(lobbyCode).emit("setPoll", {
                 questions: lobby.poll,
             });
@@ -166,25 +167,35 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on("getTotalUsers", ({ lobbyCode }) => {
-        if(lobbies[lobbyCode]){
-            const lobby = lobbies[lobbyCode];
-            const total = lobby.users.length;
-
-            io.to(lobbyCode).emit("setTotalUsers", total);
-        } else {
-            console.log("Lobby not found for code:", lobbyCode);
-            socket.emit('Error', "Error with getTotalUsers")
-        }
-    });
-
 
     socket.on("vote",( { optionId, currentQuestion, lobbyCode } ) => {
-        const lobby = lobbies[lobbyCode];
+        let lobby = lobbies[lobbyCode];
 
         if(!lobby){
             return socket.emit('Error', "Error with vote, no lobby");
         }
+
+        lobby.poll[currentQuestion].options.forEach((option) => {
+            option.votes = option.votes.filter((user) => user !== socket.data.user);
+        });
+        const option = lobby.poll[currentQuestion].options.find((o) => o.id === optionId);
+        if(!option){
+            return;
+        }
+
+        lobbies[lobbyCode].poll[currentQuestion].options[optionId - 1].votes.push(socket.data.user);
+
+        // pushes a vote to the lobby poll
+        // lobbies[lobbyCode].poll[currentQuestion].options[optionId - 1].votes.push(socket.data.user);
+        // console.log(`Casted vote: ${lobbies[lobbyCode].poll[currentQuestion].options[optionId - 1].votes}`)
+
+        lobby = lobbies[lobbyCode]
+
+
+        // want to know if I can just send it without doing 'questions:' bc it sets an array in another array for no reason
+        io.to(lobbyCode).emit("setPoll", {
+            questions: lobby.poll,
+        });
 
         // gets the poll question
         // console.log(lobby.poll[currentQuestion]);
@@ -201,7 +212,17 @@ io.on("connection", socket => {
     socket.on("disconnect", () =>{
         for (const [code, lobby] of Object.entries(lobbies)) {
             if (lobby.users.includes(socket.data.user)) {
+
+                // deletes the user from the lobby
                 lobby.users = lobby.users.filter(user => user !== socket.data.user);
+
+                // deletes the user from the votes
+                lobby.poll.forEach(question => {
+                    question.options.forEach(option => {
+                       option.votes = option.votes.filter(vote => vote !== socket.data.user);
+                    });
+                });
+
                 if (lobby.users.length === 0) {
                     delete lobbies[code]; // Remove the lobby if no users left
                     console.log(`Lobby with code ${code} has been removed`)
