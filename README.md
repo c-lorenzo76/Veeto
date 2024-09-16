@@ -1,6 +1,5 @@
 <p align="center">
     <h1 align="center" style="font-family: 'Poppins', sans-serif; text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);">Veeto</h1>
-    <br>
 </p>
 
 ## Background
@@ -52,10 +51,39 @@ npm run dev
 ## Landing Page
 ![landing_page.jpg](./client/public/landing_page.jpg)
 
+## Create Page
+![create.jpg](./client/public/create.jpg)
 
+## Join Page
+![join.jpg](./client/public/join.jpg)
 
+## Lobby Page
+![lobby.jpg](./client/public/lobby.jpg)
+
+## Questions Page
+![question.jpg](./client/public/question.jpg)
 
 ### Updates
+09/15 <br>
+I finished the voting poll feature it works properly. I just now need
+to make a new page that shows the results. For right now I don't know how to 
+properly work around the priority of the input and how to display only 
+relevant questions for that. I will figure that AFTER doing the results page. 
+I also fixed the 'disconnect' socket via backend for when a user would leave 
+their votes would stay in the 'lobby[lobbyCode]', it now deletes them. I also
+fixed the progress bar in 'Questions.jsx'. I do need to make the Questions fit 
+in the box a bit better when the window is minimized. I still need to fix that 
+error in lobby.jsx -> Check the render method of `Lobby`. See
+https://reactjs.org/link/warning-keys for more information. So my next top 
+priorities is to display the results and maybe set it up on a server computer. 
+Then it would be to go back to other pages and fix some other mistakes. 
+For instance the language selector, navigating every user in the lobby to main
+menu when the host disconnects, leave option in lobby and in-game, kick option
+from lobby for the host, removing the annoying 'copied to clipboard' from lobby
+make it just a popup not something you have to click out of. Actually testing it
+there seems to be an error when someone leaves mid-game it doesn't advance even if 
+the host continues voting. 
+
 09/13 <br>
 I followed on the approach of having 'lobbyInfo' to be able to update 'users'. 
 Then that's how I kept track of the users connected since I would just use 
@@ -77,8 +105,8 @@ I still have to finish the Questions.jsx with the voting feature.
 Found a temp solution to the player count but has problems when
 a user disconnects as it does not update. Did a minor 
 change to use the disconnect that is already in index.js but for 
-some reason it would also pass onto the lobby.jsx so it would remove it twice? Was acting off. 
-Might have to make two different disconnects?? I think i just need a better way of checking for user count,
+some reason it would also pass onto the lobby.jsx, so it would remove it twice? Was acting off. 
+Might have to make two different disconnects?? I think I just need a better way of checking for user count,
 maybe actually store all the users and then just use length similar to lobbyinfo. 
 I need to also adjust the Lobby.jsx sockets or just the sockets in general. 
 Figure out how to have it run only when required I have that shit constantly 
@@ -87,13 +115,13 @@ if motion has anything to do with it. START TO PUT IT ONTO A SERVER BY END OF WE
 
 09/04 <br>
 I fixed the issue of only the host being redirected to Questions page. I now need to add the voting
-implementation. After I need to adjust it to become a multi step form. Once those two things are in play 
+implementation. After I need to adjust it to become a multistep form. Once those two things are in play 
 I can make it show the results from the poll. Have it display places to eat according to the responses 
 May need to create a new Google account to be able to make requests based off coordinates or see other 
-API uses. Maybe don't even need that an could use TripAdvisor API.
+API uses. Maybe don't even need that and could use TripAdvisor API.
 Warning: Each child in a list should have a unique "key" prop.
 
-error for something idk what
+error for something I don't know what
 
 Check the render method of `Lobby`. See https://reactjs.org/link/warning-keys for more information.
 MotionComponent@http://localhost:5173/node_modules/.vite/deps/framer-motion.js:475:40
@@ -107,14 +135,14 @@ BrowserRouter@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js:
 App
 
 08/30 <br>
-Okay I believe I fixed the issue with navigating and maintaining the connection of the socket. Had some issues resolving that but now I am able to continue 
+Okay I believe I fixed the issue with navigating and maintaining the connection of the socket. Had some issues resolving that, but now I am able to continue 
 to navigate without any hiccups. I might have to refactor my code as its all over the place. I also have lots of unnecessary
 functions and emit that don't amount to nothing. So before we work on Questions.jsx tomorrow. I'll fix those issues first. 
 
 08/28 <br>
 Currently it is somewhat working. 
 Having issues with navigating. 
-When I start the game from Lobby and it navigates I lose connection of the socket and therefore deletes lobbies[code]. 
+When I start the game from Lobby, and it navigates I lose connection of the socket and therefore deletes lobbies[code]. 
 Need to figure out how to maintain that when navigating might have to resolve by rewriting useSocket and UserContext. 
 
 
