@@ -35,7 +35,7 @@ io.use((socket, next) => {
 io.on("connection", socket => {
     console.log("user connected: ", socket.data.user);
 
-    socket.on("createLobby", () =>{
+    socket.on("createLobby", ({ coords }) =>{
         let code = generateCode(); // generates code
 
         while(lobbies[code]){             // checks to see no other lobby w/ code
@@ -45,6 +45,7 @@ io.on("connection", socket => {
         lobbies[code] = {
             host: socket.data.user,
             users: [socket.data.user],
+            coords: coords,
             poll: [
                 {
                     id: 1,
@@ -108,6 +109,7 @@ io.on("connection", socket => {
         socket.emit("lobbyCreated", code);
 
         console.log(`Lobby created with code: ${code}`);
+        console.log(lobbies[code])
     });
 
     socket.on("joinLobby", ({ lobbyCode }) => {

@@ -64,6 +64,21 @@ npm run dev
 ![question.jpg](./client/public/question.jpg)
 
 ### Updates
+09/16 <br>
+A way I was thinking of keeping track based of priority I can make a switch statement
+so in the backend I have three separate arrays with the questions based of the 
+top priority. Then when the first question gets answered it appends the following 
+questions based of the response. Right now I want to make it so that in the page
+'Create.jsx' it pulls the location of the host and stores it in the backend 
+'Lobbies'. I need to add a new variable named 'location' don't know if I want 
+to store the latitude and longitude or the city location. 
+<br>
+I managed to store the lat and long in the lobbies only from the Create page. Now
+the only thing I need to debug is to set an alert for when a user clicks no that
+explains it requires the location and that it cant work without it. The next thing
+I need to do is to allow to display the allow or not after they click no and they retry.
+Because they have to refresh the page in order for it to appear again.
+
 09/15 <br>
 I finished the voting poll feature it works properly. I just now need
 to make a new page that shows the results. For right now I don't know how to 

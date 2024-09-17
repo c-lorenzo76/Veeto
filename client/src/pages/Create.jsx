@@ -26,8 +26,10 @@ import { useSocket } from "@/SocketContext"
 import AvatarSelection from "@/components/AvatarSelection";
 
 export const Create = () => {
+
     const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [name, setName] = useState('');
+
     const navigate = useNavigate();
     const { socket } = useSocket();
 
@@ -36,16 +38,29 @@ export const Create = () => {
         setSelectedAvatar(avatar);
     };
 
-    const handleCreateLobby = () => {
-        if (name.trim() === '') return;
+    // asks for location
+    const handleLocation = () => {
+        if(!navigator.geolocation){
+            alert('Geolocation is not supported by your browser');
+        } else{
+            navigator.geolocation.getCurrentPosition(createLobby);
+        }
+    };
 
+
+    function createLobby(position) {
+
+        const coords = `${position.coords.latitude} , ${position.coords.longitude}`;
+
+        if (name.trim() && coords.trim() === '') return;
         console.log(`Name: ${name}`)
+        console.log(`Coords: ${coords}`)
 
-        if(socket){
-            socket.auth = { token: name, avatar: selectedAvatar  };
+        if (socket) {
+            socket.auth = {token: name, avatar: selectedAvatar};
             socket.connect();
 
-            socket.emit("createLobby");
+            socket.emit("createLobby", {coords});
 
             socket.on('lobbyCreated', (code) => {
                 navigate(`/Lobby/${code}`);
@@ -53,7 +68,7 @@ export const Create = () => {
         } else {
             console.error('Socket not initialized...')
         }
-    };
+    }
 
     return (
         <div className="flex flex-col justify-center min-h-screen items-center bg-gray-100">
@@ -125,7 +140,7 @@ export const Create = () => {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" onClick={handleCreateLobby}>
+                        <Button className="w-full" onClick={handleLocation}>
                             <ChevronRight/>
                             create
                         </Button>
