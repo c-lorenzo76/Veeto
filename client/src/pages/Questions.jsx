@@ -1,6 +1,6 @@
-import {useState, useEffect, useMemo} from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Layout } from "./Layout.jsx"
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button, Card } from "flowbite-react";
 import { useSocket } from "@/SocketContext";
 import { Progress } from "@/components/ui/progress";
@@ -10,6 +10,7 @@ export const Questions = () => {
 
     const { socket } = useSocket();
     const { code} = useParams();
+    const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
     const [poll, setPoll] = useState(null);
@@ -26,18 +27,22 @@ export const Questions = () => {
         // retrieves and sets the poll data
         socket.emit('getPollData', {lobbyCode: code});
         socket.on('setPoll', (poll) => {
-            // console.log(`Poll: ${JSON.stringify(poll, null, 2)}`);
             console.log(`Questions: ${JSON.stringify(poll,null, 1)}`);
             setPoll(poll);
         });
 
-        // Gets lobbyUsers
+        // sets the users
         socket.emit('updateLobby', {lobbyCode: code});
         socket.on("lobbyInfo", (lobby) => {
             console.log('lobby info');
             setUsers(lobby.users)
         });
 
+        socket.on("navResults", () => {
+            navigate(`/Results/${code}`);
+        });
+
+        // updates users when a user disconnects
         socket.on("userDisconnect", (discPlayer) => {
             setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
             console.log(discPlayer, "Disconnected")
@@ -49,6 +54,7 @@ export const Questions = () => {
 
     }, [code, socket]);
 
+    // the total votes for the option
     let totalVotes = useMemo(() => {
         console.log(poll?.questions[currentQuestion].options.reduce((acc, option) => acc + option.votes.length, 0) ?? 0);
         return (
@@ -62,12 +68,14 @@ export const Questions = () => {
 
 
     useEffect(() => {
-        if (totalVotes === users.length) {
-            if (currentQuestion < poll?.questions.length - 1) {
-                setCurrentQuestion(currentQuestion + 1);
-            } else {
-                // Future logic to emit to the backend and navigate to results
-                console.log("Poll has finished");
+        if(poll){
+            if (totalVotes === users.length) {
+                if (currentQuestion < poll?.questions.length - 1) {
+                    setCurrentQuestion(currentQuestion + 1);
+                } else {
+                    // Future logic to emit to the backend and navigate to results
+                    socket.emit("pollEnded", {code});
+                }
             }
         }
     }, [totalVotes, currentQuestion]);
@@ -75,9 +83,10 @@ export const Questions = () => {
     return (
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
             <div className={"w-full bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center justify-center"}>
-                <Progress value={((currentQuestion) / poll?.questions.length) * 100} className={""} />
-                <p className={"ml-1 "}>{((currentQuestion) / poll?.questions.length) * 100}%</p>
+                <Progress value={((currentQuestion + 1) / poll?.questions.length) * 100} className={""} />
+                <p className={"ml-1 "}>{((currentQuestion +1) / poll?.questions.length) * 100}%</p>
             </div>
+
             <div className={"w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md "}>
                 {poll && (
                     <>

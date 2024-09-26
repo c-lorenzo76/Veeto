@@ -1,6 +1,6 @@
-<p align="center">
-    <h1 align="center" style="font-family: 'Poppins', sans-serif; text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);">Veeto</h1>
-</p>
+
+<h1 align="center" style="font-family: 'Poppins', sans-serif; text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);">Veeto</h1>
+
 
 ## Background
 Veeto was inspired by the many occurrences where my partner and I struggled to decide where to eat, 
@@ -63,7 +63,20 @@ npm run dev
 ## Questions Page
 ![question.jpg](./client/public/question.jpg)
 
+## Results Page
+![results.jpg](./client/public/results.jpg)
+
 ### Updates
+09/26 <br>
+I haven't fully finished the Results page. I'm having trouble when I don't hardcode the location. 
+It was showing me places all the way at New York no matter how far I set the distance. 
+Other issues I'm having is that I am not able to make the query based of the selections. 
+I am also going to have to figure out how to display the images of the locations. 
+Also apply a hyperlink to the places based of the uri or whatever. Make the ratings show stars as well. 
+The price level not sure whether to have the dollar sign or just maintain it the way it is. 
+Oh and make the progress bar shorter that shit takes up too much space. I have a lot
+to go over. I think I'm jsut going to make it be on the web and will then make the changes. 
+<br>
 09/16 <br>
 A way I was thinking of keeping track based of priority I can make a switch statement
 so in the backend I have three separate arrays with the questions based of the 
@@ -78,6 +91,16 @@ the only thing I need to debug is to set an alert for when a user clicks no that
 explains it requires the location and that it cant work without it. The next thing
 I need to do is to allow to display the allow or not after they click no and they retry.
 Because they have to refresh the page in order for it to appear again.
+<br>
+I finished the Google Account set up. I'm going to use Google Cloud Platform for the API. 
+Specifically use the 'Places API (New)'. Now I managed to get the Questions to navigate
+to 'Results.jsx' once the questions is finished. I just need to figure out how to do the 
+API call. Okay if I'm not mistaken the API is free until I reach a limit of 11,765 free req
+for each month. Now unless there's some asshole that does a script to fuck me over I should 
+be good with that the alternative was Yelp Fusion API. Anyways I just need to finish the 
+Results page and then the project is practically done. I would just go back and do those 
+minor changes. Good shit.
+
 
 09/15 <br>
 I finished the voting poll feature it works properly. I just now need

@@ -6,7 +6,9 @@ import {Create} from "./pages/Create";
 import {Join} from "./pages/Join";
 import {Lobby} from "./pages/Lobby";
 import {Questions} from "./pages/Questions";
+import {Results} from "./pages/Results";
 import {SocketProvider} from "./SocketContext";
+
 
 
 const App = () => {
@@ -19,6 +21,7 @@ const App = () => {
                 <Route path={"Join"} element={<SocketProvider><Join/></SocketProvider>}/>
                 <Route path={"Lobby/:code"} element={<SocketProvider><Lobby/></SocketProvider>}/>
                 <Route path={"Questions/:code"} element={<SocketProvider><Questions/></SocketProvider>}/>
+                <Route path={"Results/:code"} element={<SocketProvider><Results/></SocketProvider>}/>
             </Routes>
         </BrowserRouter>
     )

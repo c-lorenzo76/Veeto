@@ -50,7 +50,7 @@ export const Create = () => {
 
     function createLobby(position) {
 
-        const coords = `${position.coords.latitude} , ${position.coords.longitude}`;
+        const coords = `${position.coords.latitude},${position.coords.longitude}`;
 
         if (name.trim() && coords.trim() === '') return;
         console.log(`Name: ${name}`)
