@@ -67,6 +67,13 @@ npm run dev
 ![results.jpg](./client/public/results.jpg)
 
 ### Updates
+09/28 <br>
+I fixed the lobby.jsx error. I need to fix it how you view it on mobile. It doesn't look that well. 
+I also need to finish the backend implementation of the results because it doesn't display off the 
+users choices. I also need to edit the results page and make it so that it shows only 5 at first 
+and allows for pagination. Tomorrow I'll add it so its on an EC2 host or close to be able to have 
+it on a EC2 host. I also need to view what domains are available.  
+<br>
 09/26 <br>
 I haven't fully finished the Results page. I'm having trouble when I don't hardcode the location. 
 It was showing me places all the way at New York no matter how far I set the distance. 

@@ -139,6 +139,7 @@ export const Lobby = () => {
                 <div className="m-10 mx-auto gap-8 grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     {users.map((user, index) => (
                         <motion.div
+                            key={user}
                             initial={{opacity: 0, scale: 0.5}}
                             animate={{opacity: 1, scale: 1}}
                             transition={{duration: 0.95}}

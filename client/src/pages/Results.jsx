@@ -21,6 +21,16 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination"
+
 
 export const Results = () => {
 
@@ -28,6 +38,7 @@ export const Results = () => {
     const { code } = useParams();
 
     const [places, setPlaces] = useState([])
+
 
     if(!socket){
         console.error('Socket is not initialized..');
@@ -51,7 +62,6 @@ export const Results = () => {
                 <p className={"ml-1"}> 100% </p>
             </div>
             <div className={"w-auto bg-gray-100 rounded-xl mx-auto p-8 shadow-md"}>
-                <h1 className={"text-center font-bold p-2"}>Recommended Places</h1>
                 <Card x-chunk={"dashboard-06-chunk-0"}>
                     <CardHeader>
                         <CardTitle>Results</CardTitle>
@@ -61,7 +71,7 @@ export const Results = () => {
                     </CardHeader>
                     <CardContent>
                         <Table className={""}>
-                            <TableCaption> A list of your recommendations</TableCaption>
+                            <TableCaption className={"text-left"}> A list of your recommendations</TableCaption>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className={"hidden w-[100px] sm:table-cell"}>
@@ -89,7 +99,30 @@ export const Results = () => {
                         </Table>
                     </CardContent>
                     <CardFooter>
-
+                        <Pagination>
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious href="#" />
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationLink href="#" isActive>1</PaginationLink>
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationLink href="#">
+                                        2
+                                    </PaginationLink>
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationLink href="#">3</PaginationLink>
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationEllipsis />
+                                </PaginationItem>
+                                <PaginationItem>
+                                    <PaginationNext href="#" />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
                     </CardFooter>
 
                 </Card>
@@ -97,36 +130,3 @@ export const Results = () => {
         </Layout>
     )
 };
-
-// <div className="places-list mx-auto flex justify-center">
-//     <ul>
-//         {places.map((place) => (
-//             <li>
-//                 <div key={place.place_id} className="place-item">
-//                     <h2>{place.name}</h2>
-//                     <div className={"text-sm"}>
-//                         <p>{place.formatted_address}</p>
-//                         <p>Rating: {place.rating}</p>
-//                         <p>Price Level: {place.price_level}</p>
-//                         <br/>
-//                     </div>
-//                 </div>
-//             </li>
-//         ))}
-//     </ul>
-//
-// </div>
-
-{/*<div className={"w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md"}>*/}
-{/*    <h1 className={"text-center"}>Recommended Places</h1>*/}
-{/*    <ul className={"flex justify-center"}>*/}
-{/*        <li className={"space-y-2"}>*/}
-{/*            <h2>name</h2>*/}
-{/*            <p>rating</p>*/}
-{/*            <p>price level</p>*/}
-{/*            <p>address</p>*/}
-{/*            <p>hours</p>*/}
-{/*            <p>image</p>*/}
-{/*        </li>*/}
-{/*    </ul>*/}
-{/*</div>*/}

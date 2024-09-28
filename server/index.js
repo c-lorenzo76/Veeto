@@ -1,12 +1,12 @@
 const cors = require("cors");
 const express = require("express");
-const { Server } = require("socket.io");
+const {Server} = require("socket.io");
 require('dotenv').config();
 const axios = require('axios');
 
 
 const app = express();
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({origin: "http://localhost:5173"}));
 const server = require("http").createServer(app);
 const io = new Server(server, {
     cors: {
@@ -18,18 +18,19 @@ const io = new Server(server, {
 let lobbies = {};
 
 // random code generated for lobby
-function generateCode(){
-    return Math.random().toString(36).substring(2,8).toUpperCase(); // all 36 a-z 1-9 characters, size 6, uppercased
+function generateCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase(); // all 36 a-z 1-9 characters, size 6, uppercased
 }
 
 // socket connection
 io.use((socket, next) => {
     const user = socket.handshake.auth.token;
     const avatar = socket.handshake.auth.avatar;
-    if(user){
-        try{
-            socket.data = { ... socket.data, user: user, avatar: avatar };
-        } catch(err) {}
+    if (user) {
+        try {
+            socket.data = {...socket.data, user: user, avatar: avatar};
+        } catch (err) {
+        }
     }
     next();
 });
@@ -38,10 +39,10 @@ io.use((socket, next) => {
 io.on("connection", socket => {
     console.log("user connected: ", socket.data.user);
 
-    socket.on("createLobby", ({ coords }) =>{
+    socket.on("createLobby", ({coords}) => {
         let code = generateCode(); // generates code
 
-        while(lobbies[code]){             // checks to see no other lobby w/ code
+        while (lobbies[code]) {             // checks to see no other lobby w/ code
             code = generateCode();
         }
 
@@ -54,55 +55,55 @@ io.on("connection", socket => {
                     id: 1,
                     question: "What is your current top priority for your meal?",
                     options: [
-                        { id: 1, text: "Ambiance", votes: [] },
-                        { id: 2, text: "Budget", votes: [] },
-                        { id: 3, text: "Cuisine", votes: [] },
-                        { id: 4, text: "Distance", votes: [] },
+                        {id: 1, text: "Ambiance", votes: []},
+                        {id: 2, text: "Budget", votes: []},
+                        {id: 3, text: "Cuisine", votes: []},
+                        {id: 4, text: "Distance", votes: []},
                     ],
                 },
                 {
                     id: 2,
                     question: "What kind of ambiance are you looking for?",
                     options: [
-                        { id: 1, text: "Casual and Cozy", votes: [] },
-                        { id: 2, text: "Trendy and Modern", votes: [] },
-                        { id: 3, text: "Romantic and Intimate", votes: [] },
-                        { id: 4, text: "Family-friendly", votes: [] },
-                        { id: 5, text: "Lively and Social", votes: [] },
+                        {id: 1, text: "Casual and Cozy", votes: []},
+                        {id: 2, text: "Trendy and Modern", votes: []},
+                        {id: 3, text: "Romantic and Intimate", votes: []},
+                        {id: 4, text: "Family-friendly", votes: []},
+                        {id: 5, text: "Lively and Social", votes: []},
                     ],
                 },
                 {
                     id: 3,
                     question: "What is your preferred price range?",
                     options: [
-                        { id: 1, text: "$", votes: [] },
-                        { id: 2, text: "$$", votes: [] },
-                        { id: 3, text: "$$$", votes: [] },
-                        { id: 4, text: "$$$$", votes: [] },
+                        {id: 1, text: "$", votes: []},
+                        {id: 2, text: "$$", votes: []},
+                        {id: 3, text: "$$$", votes: []},
+                        {id: 4, text: "$$$$", votes: []},
                     ],
                 },
                 {
                     id: 4,
                     question: "What type of cuisine are you in the mood for?",
                     options: [
-                        { id: 1, text: "Italian", votes: [] },
-                        { id: 2, text: "Mexican", votes: [] },
-                        { id: 3, text: "Chinese", votes: [] },
-                        { id: 4, text: "Japanese", votes: [] },
-                        { id: 5, text: "Mediterranean", votes: [] },
-                        { id: 6, text: "American", votes: [] },
-                        { id: 7, text: "French", votes: [] },
-                        { id: 8, text: "Thai", votes: [] },
+                        {id: 1, text: "Italian", votes: []},
+                        {id: 2, text: "Mexican", votes: []},
+                        {id: 3, text: "Chinese", votes: []},
+                        {id: 4, text: "Japanese", votes: []},
+                        {id: 5, text: "Mediterranean", votes: []},
+                        {id: 6, text: "American", votes: []},
+                        {id: 7, text: "French", votes: []},
+                        {id: 8, text: "Thai", votes: []},
                     ],
                 },
                 {
                     id: 5,
                     question: "How far are you willing to travel?",
                     options: [
-                        { id: 1, text: "Walking distance (0-1 miles)", votes: [] },
-                        { id: 2, text: "Short drive (1-5 miles)", votes: [] },
-                        { id: 3, text: "Moderate drive (5-15 miles)", votes: [] },
-                        { id: 4, text: "Long drive (15+ miles)", votes: [] },
+                        {id: 1, text: "Walking distance (0-1 miles)", votes: []},
+                        {id: 2, text: "Short drive (1-5 miles)", votes: []},
+                        {id: 3, text: "Moderate drive (5-15 miles)", votes: []},
+                        {id: 4, text: "Long drive (15+ miles)", votes: []},
                     ],
                 },
             ],
@@ -115,8 +116,8 @@ io.on("connection", socket => {
         console.log(lobbies[code])
     });
 
-    socket.on("joinLobby", ({ lobbyCode }) => {
-        if(lobbies[lobbyCode]) {
+    socket.on("joinLobby", ({lobbyCode}) => {
+        if (lobbies[lobbyCode]) {
             socket.join(lobbyCode);
 
             lobbies[lobbyCode].users.push(socket.data.user);
@@ -131,14 +132,13 @@ io.on("connection", socket => {
             io.to(lobbyCode).emit("lobbyJoined", lobbyCode); // why am I passing the lobbyCode?? should be socket.data.user info check for any errors
 
             console.log(`User ${socket.data.user} joined lobby ${lobbyCode}`);
-        }
-        else{
+        } else {
             socket.emit('Error', 'Error with joinLobby');
         }
     });
 
-    socket.on("updateLobby", ({ lobbyCode }) => {
-        if(lobbies[lobbyCode]){
+    socket.on("updateLobby", ({lobbyCode}) => {
+        if (lobbies[lobbyCode]) {
             const lobby = lobbies[lobbyCode];
             io.to(lobbyCode).emit("lobbyInfo", {
                 code: lobbyCode,
@@ -146,17 +146,16 @@ io.on("connection", socket => {
                 host: lobby.host,
             });
             console.log(`Updated lobby information on Lobby: ${lobbyCode}`)
-        }
-        else{
+        } else {
             socket.emit('Error', "Error with updateLobby");
         }
     });
 
-    socket.on("startGame", ({ lobbyCode }) => {
+    socket.on("startGame", ({lobbyCode}) => {
         io.to(lobbyCode).emit("gameStarted")
     });
 
-    socket.on("getPollData", ({ lobbyCode }) => {
+    socket.on("getPollData", ({lobbyCode}) => {
         if (lobbies[lobbyCode]) {
             const lobby = lobbies[lobbyCode];
 
@@ -172,10 +171,10 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on("vote",( { optionId, currentQuestion, lobbyCode } ) => {
+    socket.on("vote", ({optionId, currentQuestion, lobbyCode}) => {
         let lobby = lobbies[lobbyCode];
 
-        if(!lobby){
+        if (!lobby) {
             return socket.emit('Error', "Error with vote, no lobby");
         }
 
@@ -183,7 +182,7 @@ io.on("connection", socket => {
             option.votes = option.votes.filter((user) => user !== socket.data.user);
         });
         const option = lobby.poll[currentQuestion].options.find((o) => o.id === optionId);
-        if(!option){
+        if (!option) {
             return;
         }
 
@@ -223,10 +222,9 @@ io.on("connection", socket => {
             const selectedOptions = getMostVotedOptions(lobby);
             const places = await searchPlaces(selectedOptions, lobby.coords);
 
-            setTimeout(() => {
-                io.to(code).emit('getPlaces', places);
-                console.log('SENT TO RESULTS', places[0]);
-            }, 1000)
+            io.to(code).emit('getPlaces', places);
+            console.log('SENT TO RESULTS', places[0]);
+
         }
     }
 
@@ -245,7 +243,7 @@ io.on("connection", socket => {
         return selectedOptions;
     }
 
-    async function searchPlaces(selectedOptions, coords){
+    async function searchPlaces(selectedOptions, coords) {
         const distanceToRadius = {
             "Walking distance (0-1 miles)": 1610, // 1 mile in meters
             "Short drive (1-5 miles)": 8047, // 5 miles in meters
@@ -253,9 +251,9 @@ io.on("connection", socket => {
             "Long drive (15+ miles)": 50000 // 50 km or 50,000 meters
         };
 
-        // const location = coords;
+        const location = coords;
         // console.log(location);
-        // const radius = distanceToRadius[selectedOptions[selectedOptions.length - 1]];
+        const radius = distanceToRadius[selectedOptions[selectedOptions.length - 1]];
         // const type ='restaurant';
         // const query = selectedOptions.slice(0, -1).join(' ');
         // console.log(query);
@@ -270,11 +268,11 @@ io.on("connection", socket => {
         //     console.error('Error searching places:', error);
         //     return [];
         // }
-        const testLocation = '35.850174959411014,-79.56182821402501';
-        const testQuery = 'Chinese';
-        const testRadius = 8045; // Short drive (1-5 miles)
+        // const testLocation = '35.850174959411014,-79.56182821402501';
+        const testQuery = 'Japanese';
+        // const testRadius = 8045; // Short drive (1-5 miles)
 
-        const testUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${testQuery}&location=${testLocation}&radius=${testRadius}&type=restaurant&key=${process.env.SECRET_KEY}`;
+        const testUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${testQuery}&location=${location}&radius=${radius}&type=restaurant&key=${process.env.SECRET_KEY}`;
 
         try {
             const response = await axios.get(testUrl);
@@ -286,8 +284,7 @@ io.on("connection", socket => {
 
     }
 
-
-    socket.on("disconnect", () =>{
+    socket.on("disconnect", () => {
         for (const [code, lobby] of Object.entries(lobbies)) {
             if (lobby.users.includes(socket.data.user)) {
 
@@ -297,7 +294,7 @@ io.on("connection", socket => {
                 // deletes the user from the votes
                 lobby.poll.forEach(question => {
                     question.options.forEach(option => {
-                       option.votes = option.votes.filter(vote => vote !== socket.data.user);
+                        option.votes = option.votes.filter(vote => vote !== socket.data.user);
                     });
                 });
 
