@@ -40,7 +40,7 @@ export const Results = () => {
     const [places, setPlaces] = useState([])
 
 
-    if(!socket){
+    if (!socket) {
         console.error('Socket is not initialized..');
         return;
     }
@@ -49,7 +49,7 @@ export const Results = () => {
 
         // gets the results
         socket.on('getPlaces', (places) => {
-            console.log(`Places: ${JSON.stringify(places,null, 1)}`);
+            console.log(`Places: ${JSON.stringify(places, null, 1)}`);
             setPlaces(places);
         });
 
@@ -57,11 +57,12 @@ export const Results = () => {
 
     return (
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
-            <div className={"border w-full bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center justify-center "}>
-                <Progress className={""} value={100} />
-                <p className={"ml-1"}> 100% </p>
+            <div className="border w-[90%] lg:w-[80%] bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center">
+                <Progress className="flex-1" value={100} />
+                <p className="ml-1">100%</p>
             </div>
-            <div className={"w-auto bg-gray-100 rounded-xl mx-auto p-8 shadow-md"}>
+
+            <div className={"w-[90%] lg:w-auto bg-gray-100 rounded-xl mx-auto p-8 shadow-md"}>
                 <Card x-chunk={"dashboard-06-chunk-0"}>
                     <CardHeader>
                         <CardTitle>Results</CardTitle>
@@ -87,7 +88,7 @@ export const Results = () => {
                                 {places.map((place) => (
                                     <TableRow key={place.place_id}>
                                         <TableCell className={"hidden sm:table-cell"}>
-                                            <img alt={"location_img"} className={"aspect-square rounded-md object-cover"} height={"64"} src={"/create.jpg"} width={"64"}/>
+                                            <img alt={"location_img"} className={"aspect-square rounded-md object-cover"} height={"64"} src={"/create.jpg"} width={"64"} />
                                         </TableCell>
                                         <TableCell className={"font-medium"}>{place.name}</TableCell>
                                         <TableCell>{place.formatted_address}</TableCell>

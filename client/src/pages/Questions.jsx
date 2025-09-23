@@ -82,7 +82,7 @@ export const Questions = () => {
 
     return (
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
-            <div className={"w-full bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center justify-center"}>
+            <div className={"w-full lg:w-[80%]  bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center justify-center"}>
                 <Progress value={((currentQuestion + 1) / poll?.questions.length) * 100} className={""} />
                 <p className={"ml-1 "}>{((currentQuestion +1) / poll?.questions.length) * 100}%</p>
             </div>
