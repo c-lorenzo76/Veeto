@@ -30,6 +30,7 @@ import { useState } from "react";
 import AvatarSelection from "@/components/AvatarSelection";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketContext";
+import { useEffect } from "react";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 
 
@@ -45,6 +46,17 @@ export const Join = () => {
         setSelectedAvatar(avatar);
     };
 
+    useEffect(() => {
+        if (!socket) return;
+        const handleLobbyJoined = () => {
+            navigate(`/Lobby/${pin}`);
+        };
+        socket.on('lobbyJoined', handleLobbyJoined);
+        return () => {
+            socket.off('lobbyJoined', handleLobbyJoined);
+        }
+    }, [socket, pin, navigate]);
+
     const handleJoin = () => {
         console.log("name: ", name);
         console.log("lobby-code: ", pin);
@@ -52,12 +64,22 @@ export const Join = () => {
         if (name && pin) {
             connectSocket(name, selectedAvatar);
             socket.emit("joinLobby", { lobbyCode: pin });
-
-            socket.on('lobbyJoined', () => {
-               navigate(`/Lobby/${pin}`);
-            });
         }
-    };
+    }
+
+    // const handleJoin = () => {
+    //     console.log("name: ", name);
+    //     console.log("lobby-code: ", pin);
+
+    //     if (name && pin) {
+    //         connectSocket(name, selectedAvatar);
+    //         socket.emit("joinLobby", { lobbyCode: pin });
+
+    //         socket.on('lobbyJoined', () => {
+    //             navigate(`/Lobby/${pin}`);
+    //         });
+    //     }
+    // };
 
     return (
         <div className="flex flex-col justify-center min-h-screen items-center bg-gray-100">
@@ -93,8 +115,8 @@ export const Join = () => {
                                                 className={"p-0 w-20 h-20 border bg-transparent hover:bg-muted-foreground/50 rounded-full"}>
                                                 {selectedAvatar ? (
                                                     <img src={selectedAvatar}
-                                                         alt={"Selected avatar"}
-                                                         className={"w-20 h-20 object-cover rounded-full border-blue-600"} />
+                                                        alt={"Selected avatar"}
+                                                        className={"w-20 h-20 object-cover rounded-full border-blue-600"} />
                                                 ) : (
                                                     <div className={"flex items-center justify-center"}>
                                                         <Plus size={15} className={"stroke-black"} />

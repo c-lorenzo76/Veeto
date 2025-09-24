@@ -9,50 +9,53 @@ import { Progress } from "@/components/ui/progress";
 export const Questions = () => {
 
     const { socket } = useSocket();
-    const { code} = useParams();
+    const { code } = useParams();
     const navigate = useNavigate();
 
     const [users, setUsers] = useState([]);
     const [poll, setPoll] = useState(null);
     const [currentQuestion, setCurrentQuestion] = useState(0); // the index of the current question
 
-
-    if(!socket){
-        console.error('Socket is not initialized..');
-        return;
-    }
-
     useEffect(() => {
+        if (!socket) return;
+        socket.emit('getPollData', { lobbyCode: code });
+        socket.emit('updateLobby', { lobbyCode: code });
+    }, [socket, code]);
 
-        // retrieves and sets the poll data
-        socket.emit('getPollData', {lobbyCode: code});
-        socket.on('setPoll', (poll) => {
-            console.log(`Questions: ${JSON.stringify(poll,null, 1)}`);
+    // Attach listeners ONCE and clean up
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleSetPoll = (poll) => {
             setPoll(poll);
-        });
-
-        // sets the users
-        socket.emit('updateLobby', {lobbyCode: code});
-        socket.on("lobbyInfo", (lobby) => {
-            console.log('lobby info');
-            setUsers(lobby.users)
-        });
-
-        socket.on("navResults", () => {
+        };
+        const handleLobbyInfo = (lobby) => {
+            setUsers(lobby.users);
+        };
+        const handleNavResults = () => {
             navigate(`/Results/${code}`);
-        });
-
-        // updates users when a user disconnects
-        socket.on("userDisconnect", (discPlayer) => {
+        };
+        const handleUserDisconnect = (discPlayer) => {
             setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
-            console.log(discPlayer, "Disconnected")
-        });
+        };
+        const handleError = (error) => {
+            console.error(error);
+        };
 
-        socket.on('Error', (error) => {
-            console.log(`There was an error ${error}`);
-        });
+        socket.on('setPoll', handleSetPoll);
+        socket.on('lobbyInfo', handleLobbyInfo);
+        socket.on('navResults', handleNavResults);
+        socket.on('userDisconnect', handleUserDisconnect);
+        socket.on('Error', handleError);
 
-    }, [code, socket]);
+        return () => {
+            socket.off('setPoll', handleSetPoll);
+            socket.off('lobbyInfo', handleLobbyInfo);
+            socket.off('navResults', handleNavResults);
+            socket.off('userDisconnect', handleUserDisconnect);
+            socket.off('Error', handleError);
+        };
+    }, [socket, code, navigate]);
 
     // the total votes for the option
     let totalVotes = useMemo(() => {
@@ -63,9 +66,8 @@ export const Questions = () => {
     }, [poll, currentQuestion]);
 
     const handleVote = (optionId) => {
-        socket.emit("vote", {optionId: optionId, currentQuestion: currentQuestion, lobbyCode: code});
+        socket.emit("vote", { optionId: optionId, currentQuestion: currentQuestion, lobbyCode: code });
     };
-
 
     useEffect(() => {
         if(poll){
@@ -84,7 +86,7 @@ export const Questions = () => {
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
             <div className={"w-full lg:w-[80%]  bg-gray-100 rounded-xl mx-auto p-4 shadow-md m-2 flex items-center justify-center"}>
                 <Progress value={((currentQuestion + 1) / poll?.questions.length) * 100} className={""} />
-                <p className={"ml-1 "}>{((currentQuestion +1) / poll?.questions.length) * 100}%</p>
+                <p className={"ml-1 "}>{((currentQuestion + 1) / poll?.questions.length) * 100}%</p>
             </div>
 
             <div className={"w-full bg-gray-100 rounded-xl mx-auto p-8 shadow-md "}>
@@ -121,13 +123,13 @@ export const Questions = () => {
                                             {option.votes.length > 0 && (
                                                 <div className={"mt-2 flex gap-2 flex-wrap max-w-[75%]"}>
                                                     {option.votes.map((vote) => (
-                                                       <div
-                                                           key={vote}
-                                                           className={"py-1 px-3 bg-gray-700 rounded-lg flex items-center justify-center shadow text-sm"}
-                                                       >
-                                                           <div className={"w-2 h-2 bg-green-500 rounded-lg flex items-center justify-center shadow text-sm m-1 "}></div>
-                                                           <div className={"text-gray-100"}>{vote}</div>
-                                                       </div>
+                                                        <div
+                                                            key={vote}
+                                                            className={"py-1 px-3 bg-gray-700 rounded-lg flex items-center justify-center shadow text-sm"}
+                                                        >
+                                                            <div className={"w-2 h-2 bg-green-500 rounded-lg flex items-center justify-center shadow text-sm m-1 "}></div>
+                                                            <div className={"text-gray-100"}>{vote}</div>
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
@@ -142,11 +144,10 @@ export const Questions = () => {
                                             <div
                                                 className="bg-gradient-to-r from-teal-400 to-purple-500 transition-all duration-300 h-full"
                                                 style={{
-                                                    width: `${
-                                                        totalVotes > 0
+                                                    width: `${totalVotes > 0
                                                             ? (option.votes.length / totalVotes) * 100
                                                             : 0
-                                                    }%`,
+                                                        }%`,
                                                 }}
                                             ></div>
                                         </div>
@@ -162,3 +163,83 @@ export const Questions = () => {
     )
 
 };
+
+
+    // useEffect(() => {
+    //     if (!socket) return;
+
+    //     const handleSetPoll = (poll) => {
+    //         console.log(`Questions: ${JSON.stringify(poll, null, 1)}`);
+    //         setPoll(poll);
+    //     };
+    //     const handleLobbyInfo = (lobby) => {
+    //         console.log('lobby info');
+    //         setUsers(lobby.users);
+    //     };
+    //     const handleNavResults = () => {
+    //         navigate(`/Results/${code}`);
+    //     };
+    //     const handleUserDisconnect = (discPlayer) => {
+    //         setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+    //         console.log(discPlayer, "Disconnected");
+    //     };
+    //     const handleError = (error) => {
+    //         console.log(`There was an error ${error}`);
+    //     };
+
+    //     socket.emit('getPollData', { lobbyCode: code });
+    //     socket.emit('updateLobby', { lobbyCode: code });
+
+    //     socket.on('setPoll', handleSetPoll);
+    //     socket.on('lobbyInfo', handleLobbyInfo);
+    //     socket.on('navResults', handleNavResults);
+    //     socket.on('userDisconnect', handleUserDisconnect);
+    //     socket.on('Error', handleError);
+
+    //     return () => {
+    //         socket.off('setPoll', handleSetPoll);
+    //         socket.off('lobbyInfo', handleLobbyInfo);
+    //         socket.off('navResults', handleNavResults);
+    //         socket.off('userDisconnect', handleUserDisconnect);
+    //         socket.off('Error', handleError);
+    //     };
+    // }, [socket, code, navigate]);
+
+    ////////////////////////////////////////////////////////////////
+
+    // if(!socket){
+    //     console.error('Socket is not initialized..');
+    //     return;
+    // }
+
+    // useEffect(() => {
+
+    //     // retrieves and sets the poll data
+    //     socket.emit('getPollData', {lobbyCode: code});
+    //     socket.on('setPoll', (poll) => {
+    //         console.log(`Questions: ${JSON.stringify(poll,null, 1)}`);
+    //         setPoll(poll);
+    //     });
+
+    //     // sets the users
+    //     socket.emit('updateLobby', {lobbyCode: code});
+    //     socket.on("lobbyInfo", (lobby) => {
+    //         console.log('lobby info');
+    //         setUsers(lobby.users)
+    //     });
+
+    //     socket.on("navResults", () => {
+    //         navigate(`/Results/${code}`);
+    //     });
+
+    //     // updates users when a user disconnects
+    //     socket.on("userDisconnect", (discPlayer) => {
+    //         setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+    //         console.log(discPlayer, "Disconnected")
+    //     });
+
+    //     socket.on('Error', (error) => {
+    //         console.log(`There was an error ${error}`);
+    //     });
+
+    // }, [code, socket]);
