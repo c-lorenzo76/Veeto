@@ -149,8 +149,9 @@ export const Join = () => {
                                     id="pin"
                                     maxLength={6}
                                     pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                                    inputMode="text"
                                     value={pin}
-                                    onChange={(e) => setPin(e)}
+                                    onChange={(e) => setPin(e.toUpperCase())}
                                 >
                                     <InputOTPGroup className="bg-white">
                                         <InputOTPSlot index={0} />
