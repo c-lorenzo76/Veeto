@@ -65,5 +65,18 @@ npm run dev
 ```
 Runs on `localhost:5173`.
 
+## Deployment
+
+Veto deploys to 4 Azure environments via GitHub Actions:
+
+| Branch | Environment | Trigger |
+|---|---|---|
+| `feature/*` | Dev1 | Auto-deploy on push |
+| `develop` | Dev | Manual approval |
+| `uat` | UAT | Manual approval |
+| `main` | Prod | Manual approval (admins only) |
+
+CI (`ci.yml`) runs lint, build, tests, and security scanning on every push and PR. See [DEPLOYMENT.md](./DEPLOYMENT.md) for full Azure infrastructure setup and the deployment pipeline.
+
 ## Known gaps
-See the "What's NOT Yet Built" section in [CLAUDE.md](./CLAUDE.md) for the current backlog (persistence, auth, mobile layout, deployment, etc.).
+See the "What's NOT Yet Built" section in [CLAUDE.md](./CLAUDE.md) for the current backlog (persistence, auth, mobile layout, etc.).
