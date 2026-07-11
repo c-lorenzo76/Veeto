@@ -112,14 +112,26 @@ done
 
 ### 5. Create Static Web Apps (client frontend)
 
+Do **not** pass `--source` here. Linking a GitHub repo via `--source` makes Azure auto-generate its own GitHub Actions workflow to build/deploy on every push — which would race against the `deploy.yml` workflow already in this repo (and ignore its branch-based approval gates entirely). Instead, create the Static Web App as a bare resource and let `deploy.yml`'s `Azure/static-web-apps-deploy@v1` step handle all deployments via an API token.
+
+Static Web Apps are only available in a subset of regions (`eastus2`, `centralus`, `westus2`, `westeurope`, `eastasia`) — not plain `eastus`.
+
 ```bash
 for env in dev1 dev uat prod; do
   az staticwebapp create \
     --name veto-client-$env \
     --resource-group veto-$env \
-    --location eastus \
-    --source https://github.com/your-org/veto \
-    --branch feature/$env
+    --location eastus2 \
+    --sku Free
+done
+```
+
+Get each Static Web App's deployment token and store it as the `AZURE_STATIC_WEB_APPS_API_TOKEN` GitHub environment secret (Settings → Environments → dev1/dev/uat/prod):
+
+```bash
+for env in dev1 dev uat prod; do
+  echo "=== $env ==="
+  az staticwebapp secrets list --name veto-client-$env --query "properties.apiKey" -o tsv
 done
 ```
 
@@ -134,16 +146,24 @@ for env in dev1 dev uat prod; do
 done
 ```
 
-Store secrets in each vault:
+First, look up each Static Web App's actual hostname (Azure appends a random suffix, so it won't match a predictable pattern):
+
 ```bash
-# Example for Dev1
+for env in dev1 dev uat prod; do
+  echo "=== $env ==="
+  az staticwebapp show --name veto-client-$env --query "defaultHostname" -o tsv
+done
+```
+
+Store secrets in each vault using the real hostname returned above:
+```bash
+# Example for Dev1 — replace with the actual hostname from the command above
 VAULT=veto-dev1-kv
-RG=veto-dev1
 
 az keyvault secret set --vault-name $VAULT --name SECRET-KEY --value "your_google_places_api_key"
-az keyvault secret set --vault-name $VAULT --name CLIENT-ORIGIN --value "https://veto-dev1.azurestaticapps.net"
+az keyvault secret set --vault-name $VAULT --name CLIENT-ORIGIN --value "https://<actual-dev1-hostname>.azurestaticapps.net"
 
-# Repeat for dev, uat, prod with their respective URLs
+# Repeat for dev, uat, prod with their respective real hostnames
 ```
 
 ### 7. Enable Managed Identity & Key Vault Access
@@ -248,14 +268,17 @@ In GitHub, protect branches that feed deployment:
 
 ## Environment URLs
 
-Once deployed, your app will be at:
+Azure assigns a random suffix to both Static Web App and Container App hostnames — there's no predictable URL pattern. Look them up directly:
 
-| Env | Frontend | Backend |
-|-----|----------|---------|
-| Dev1 | https://veto-dev1.azurestaticapps.net | https://veto-server-dev1.azurecontainerapps.io |
-| Dev | https://veto-dev.azurestaticapps.net | https://veto-server-dev.azurecontainerapps.io |
-| UAT | https://veto-uat.azurestaticapps.net | https://veto-server-uat.azurecontainerapps.io |
-| Prod | https://veto.app (custom domain) | https://api.veto.app (custom domain) |
+```bash
+for env in dev1 dev uat prod; do
+  echo "=== $env ==="
+  echo "Frontend: $(az staticwebapp show --name veto-client-$env --query defaultHostname -o tsv)"
+  echo "Backend:  $(az containerapp show --name veto-server-$env --resource-group veto-$env --query properties.configuration.ingress.fqdn -o tsv)"
+done
+```
+
+For Prod, you'll likely want to map a custom domain (e.g. `veto.app` / `api.veto.app`) once the auto-generated hostnames are confirmed working.
 
 ## Next Steps
 

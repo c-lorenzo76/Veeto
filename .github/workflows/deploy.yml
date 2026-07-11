@@ -108,6 +108,7 @@ jobs:
 
       # Deploy server to Container App
       - name: Deploy server to Container App
+        id: containerapp
         run: |
           ENV=${{ needs.determine-env.outputs.environment }}
           REGISTRY_LOGIN_SERVER="${{ env.REGISTRY_NAME }}.azurecr.io"
@@ -122,6 +123,9 @@ jobs:
                            "CLIENT_ORIGIN=${{ steps.keyvault.outputs.client_origin }}" \
                            "NODE_ENV=${{ env.NODE_ENV }}"
 
+          FQDN=$(az containerapp show --name $CONTAINER_APP --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+          echo "fqdn=$FQDN" >> $GITHUB_OUTPUT
+
       # Build client
       - name: Build client
         run: |
@@ -129,7 +133,7 @@ jobs:
           npm ci
           npm run build
         env:
-          VITE_API_BASE_URL: https://veto-${{ needs.determine-env.outputs.environment }}.azurecontainerapps.io
+          VITE_API_BASE_URL: https://${{ steps.containerapp.outputs.fqdn }}
 
       # Deploy client to Static Web App
       - name: Deploy client to Static Web App
