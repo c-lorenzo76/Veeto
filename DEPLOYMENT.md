@@ -205,9 +205,23 @@ for env in dev1 dev uat prod; do
 done
 ```
 
+**Also grant each Container App's managed identity pull access to the shared ACR.** Step 4 created these Container Apps with a public placeholder image, so they have no configured way to authenticate to the private registry yet — without this, `az containerapp update --image vetoacr.azurecr.io/...` in `deploy.yml` fails once it tries to actually deploy your real image:
+
+```bash
+for env in dev1 dev uat prod; do
+  RG=veto-$env
+  CONTAINER_APP=veto-server-$env
+  IDENTITY=$(az containerapp show -n $CONTAINER_APP -g $RG --query identity.principalId -o tsv)
+  az role assignment create --role "AcrPull" --assignee $IDENTITY --scope $(az acr show --name vetoacr --query id -o tsv)
+  az containerapp registry set --name $CONTAINER_APP --resource-group $RG --server vetoacr.azurecr.io --identity system
+done
+```
+
 ### 8. Set Up GitHub OIDC Federation
 
-Replace `c-lorenzo76/Veeto` below with your actual `<owner>/<repo>` if different.
+Replace `c-lorenzo76/Veto` below with your actual `<owner>/<repo>` if different.
+
+**If you rename the repo after setting up federated credentials, redo this section.** Azure's federated credential `subject` is an exact string match against GitHub's OIDC token, which encodes the repo's *current* name — a rename breaks every existing credential silently (the `azure/login@v1` step starts failing with no useful error). Delete and recreate each federated credential with the new repo name (see step 3 below) rather than trying to edit it in place.
 
 **Note on shell comments:** if pasting multi-line blocks into an interactive `zsh` session, strip any `#` comment lines first — interactive zsh doesn't treat `#` as a comment by default, so a standalone comment line fails with `command not found: #`. It's usually harmless (the real commands on other lines still run), but the blocks below are written comment-free to avoid the issue entirely, and each step includes its own verification command so a partial failure is easy to catch.
 
@@ -233,7 +247,7 @@ done
 ```bash
 for env in dev1 dev uat prod; do
   APP_ID=$(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv)
-  az ad app federated-credential create --id $APP_ID --parameters "{\"name\":\"github-$env\",\"issuer\":\"https://token.actions.githubusercontent.com\",\"subject\":\"repo:c-lorenzo76/Veeto:environment:$env\",\"audiences\":[\"api://AzureADTokenExchange\"]}"
+  az ad app federated-credential create --id $APP_ID --parameters "{\"name\":\"github-$env\",\"issuer\":\"https://token.actions.githubusercontent.com\",\"subject\":\"repo:c-lorenzo76/Veto:environment:$env\",\"audiences\":[\"api://AzureADTokenExchange\"]}"
 done
 ```
 

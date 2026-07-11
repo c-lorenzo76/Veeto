@@ -121,7 +121,7 @@ jobs:
             --image $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${ENV}-${{ github.sha }} \
             --set-env-vars "SECRET_KEY=${{ steps.keyvault.outputs.secret_key }}" \
                            "CLIENT_ORIGIN=${{ steps.keyvault.outputs.client_origin }}" \
-                           "NODE_ENV=${{ env.NODE_ENV }}"
+                           "NODE_ENV=$([ "$ENV" = "prod" ] && echo production || echo development)"
 
           FQDN=$(az containerapp show --name $CONTAINER_APP --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
           echo "fqdn=$FQDN" >> $GITHUB_OUTPUT
