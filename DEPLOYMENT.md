@@ -155,7 +155,20 @@ for env in dev1 dev uat prod; do
 done
 ```
 
-Store secrets in each vault using the real hostname returned above:
+**Important — new Key Vaults default to Azure RBAC permission mode.** Creating the vault does not automatically grant you (or anyone) access to read/write secrets in it, even as the creator. Grant yourself access first:
+
+```bash
+for env in dev1 dev uat prod; do
+  az role assignment create \
+    --role "Key Vault Secrets Officer" \
+    --assignee $(az ad signed-in-user show --query id -o tsv) \
+    --scope $(az keyvault show --name veto-${env}-kv --query id -o tsv)
+done
+```
+
+Role assignments can take 1-2 minutes to propagate — if secret commands below fail with `Forbidden`/`ForbiddenByRbac` immediately after this, just wait and retry.
+
+Store secrets in each vault using the real hostname returned above (do this one environment at a time, not as a loop, so you can verify each before moving on):
 ```bash
 # Example for Dev1 — replace with the actual hostname from the command above
 VAULT=veto-dev1-kv
@@ -166,21 +179,29 @@ az keyvault secret set --vault-name $VAULT --name CLIENT-ORIGIN --value "https:/
 # Repeat for dev, uat, prod with their respective real hostnames
 ```
 
+If your Google Places API key has ever been pasted anywhere outside your own terminal (chat, screenshot, shared doc), treat it as compromised and regenerate it in Google Cloud Console before storing it here.
+
 ### 7. Enable Managed Identity & Key Vault Access
 
-Grant Container App access to Key Vault:
+The Container Apps created in step 4 don't have a managed identity yet (it isn't on by default). Enable one, then grant it read access to its vault. Since the vaults use RBAC mode (see step 6), this uses a role assignment, not `az keyvault set-policy` (which only works with the legacy Access Policy model):
 
 ```bash
 for env in dev1 dev uat prod; do
   RG=veto-$env
   VAULT=veto-${env}-kv
-  
-  # Get Container App identity
-  IDENTITY=$(az containerapp show -n veto-server-$env -g $RG --query identity.principalId -o tsv)
-  
-  # Grant Key Vault access
-  az keyvault set-policy --name $VAULT --object-id $IDENTITY \
-    --secret-permissions get list
+  CONTAINER_APP=veto-server-$env
+
+  # Enable managed identity on the Container App
+  az containerapp identity assign --name $CONTAINER_APP --resource-group $RG --system-assigned
+
+  # Get the identity's principal ID
+  IDENTITY=$(az containerapp show -n $CONTAINER_APP -g $RG --query identity.principalId -o tsv)
+
+  # Grant it read-only access to secrets via RBAC
+  az role assignment create \
+    --role "Key Vault Secrets User" \
+    --assignee $IDENTITY \
+    --scope $(az keyvault show --name $VAULT --query id -o tsv)
 done
 ```
 
