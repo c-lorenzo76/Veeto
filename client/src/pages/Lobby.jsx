@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { User, Dot, ChevronsLeft, ChevronsRight, Copy } from 'lucide-react';
+import { User, Dot, ChevronsLeft, ChevronsRight, Copy, XCircle } from 'lucide-react';
 import { Footer } from "@/components/Footer";
 import { useSocket } from "@/SocketContext";
 import { useState, useEffect } from "react";
@@ -29,7 +29,10 @@ export const Lobby = () => {
         socket.on("lobbyInfo", (lobby) => {
             setLobbyCode(lobby.code);
             setUsers(lobby.users);
-            setIsHost(lobby.host === socket.auth.token);
+        });
+
+        socket.on("selfInfo", ({ isHost: hostStatus }) => {
+            setIsHost(hostStatus);
         });
 
         socket.on('gameStarted', () => {
@@ -37,13 +40,34 @@ export const Lobby = () => {
         });
 
         socket.on("userDisconnect", (discPlayer) => {
-            setUsers((prevState) => prevState.filter((u) => u !== discPlayer));
+            setUsers((prevState) => prevState.filter((u) => u.name !== discPlayer));
             console.log(discPlayer, "Disconnected")
         });
+
+        socket.on("kicked", () => {
+            navigate('/', { state: { kicked: true } });
+        });
+
+        socket.on("hostLeft", () => {
+            navigate('/', { state: { hostLeft: true } });
+        });
+
+        return () => {
+            socket.off("lobbyInfo");
+            socket.off("selfInfo");
+            socket.off("gameStarted");
+            socket.off("userDisconnect");
+            socket.off("kicked");
+            socket.off("hostLeft");
+        };
     }, [code, socket]);
 
     const handleStartGame = () => {
         socket.emit('startGame', { lobbyCode: code });
+    };
+
+    const handleKick = (targetUser) => {
+        socket.emit('kickUser', { lobbyCode: code, targetUser });
     };
 
     const handleCopyPin = () => {
@@ -71,7 +95,32 @@ export const Lobby = () => {
     }
 
     return (
-        <div className="flex flex-col min-h-screen">
+
+        <div className="flex flex-col min-h-screen bg-[#c8dcc8]">
+
+            <div className="flex mx-auto items-left w-[90%] lg:w-[80%] p-6 bg-[#1a2e1a] mt-8 rounded-3xl">
+                <div className="flex items-center">
+                    <span className="text-lg text-white font-bold">Ve</span>
+                    <span className="text-lg text-yellow-500 font-bold">to</span>
+                </div>
+
+                <div className="flex items-center ml-auto">
+                    <div className="start-button flex justify-center items-center">
+                        {isHost && (
+                            <Button
+                                className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8"
+                                onClick={handleStartGame}
+                            >
+                                Start
+                            </Button>
+                        )}
+                        {!isHost && (
+                            <span className="text-gray-300 italic">Waiting for host to start...</span>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             <motion.div
                 initial={{ opacity: 0.0, y: 0 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -81,9 +130,12 @@ export const Lobby = () => {
                     ease: "easeInOut",
                 }}
             >
-                <div className="game-pin w-max mx-auto flex flex-col items-center p-8 bg-gray-100 mt-8">
-                    <h1 className="flex items-center justify-center text-2xl font-bold">
-                        PIN: {lobbyCode || 'Loading...'}
+                <div className="game-pin w-[90%] lg:w-[80%] mx-auto flex flex-col items-left p-10 bg-[#1a2e1a] mt-6 rounded-3xl" >
+                    <h6 className="text-[#2d6a2d] font-bold">
+                        ROOM PIN
+                    </h6>
+                    <h1 className="flex items-left text-4xl font-bold text-white tracking-wider">
+                        {lobbyCode || 'Loading...'}
                         <Copy className={"ml-2 cursor-pointer"}
                             onClick={() => {
                                 if (lobbyCode) {
@@ -94,7 +146,8 @@ export const Lobby = () => {
                     </h1>
                 </div>
             </motion.div>
-            <div className="sub-nav w-full m-8 grid grid-cols-3 mx-auto items-center">
+
+            {/* <div className="sub-nav w-full m-8 grid grid-cols-3 mx-auto items-center">
                 <motion.div
                     initial={{ opacity: 0.0, x: 0 }}
                     whileInView={{ opacity: 1, x: 0 }}
@@ -145,46 +198,46 @@ export const Lobby = () => {
                         )}
                     </div>
                 </motion.div>
-            </div>
-            <div className="flex border-t-2 justify-center items-center p-5 space-x-2">
+            </div> */}
+
+            {/* <div className="flex border-t-2 justify-center items-center p-5 space-x-2">
                 <ChevronsLeft />
                 <h2 className="mt text-2xl text-center font-bold">Joined users</h2>
                 <ChevronsRight />
-            </div>
-            {/* Joined users — responsive Kahoot-like grid */}
-            {/* Joined users — avatars only (no initials fallback) */}
-            <div className="joined-users flex-grow">
-                <div className="m-8 mx-auto w-full max-w-5xl">
-                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                        {users.map((user, index) => {
-                            const displayName =
-                                typeof user === "string" ? user : user?.name || user?.username || "Player";
+            </div> */}
 
-                            const avatarProp =
-                                typeof user === "string"
-                                    ? null
-                                    : user?.avatar || user?.avatarUrl || user?.pfp || null;
-                            let avatarSrc = null;
-                            if (avatarProp) {
-                                if (/^(https?:)?\/\//.test(avatarProp) || avatarProp.startsWith("/")) {
-                                    avatarSrc = avatarProp;
-                                } else {
-                                    avatarSrc = `/assets/avatar-pfp/${avatarProp}`;
-                                }
-                            } else if (typeof user === "string") {
-                                // try to resolve a file matching the username (adjust extension if your assets use a different one)
-                                avatarSrc = `/assets/avatar-pfp/${user}.png`;
-                            }
+            <div className="flex mx-auto w-[90%] lg:w-[80%] mt-6">
+                <h2 className=" text-2xl font-bold text-black">PLAYERS</h2>
+                <div className="flex items-center ml-auto">
+                    <span className="text-black">{users.length}</span>
+                    <span className="ml-2 text-gray-500">joined</span>
+                </div>
+            </div>
+
+            <div className="joined-users flex-grow">
+                <div className="m-8 mx-auto w-[90%] lg:w-[80%]">
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ">
+                        {users.map((user, index) => {
+                            const displayName = user?.name || "Player";
+                            const avatarSrc = user?.avatar || null;
 
                             return (
                                 <motion.div
-                                    key={(typeof user === "string" ? user : displayName) + index}
+                                    key={displayName + index}
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.28, delay: index * 0.04 }}
                                     layout
                                 >
-                                    <div className="flex items-center space-x-4 bg-white/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="relative flex items-center space-x-4 bg-white/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow group">
+                                        {isHost && displayName !== socket.auth.token && (
+                                            <button
+                                                onClick={() => handleKick(displayName)}
+                                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <XCircle className="w-6 h-6 text-white fill-red-500" />
+                                            </button>
+                                        )}
                                         {avatarSrc ? (
                                             <img
                                                 src={avatarSrc}

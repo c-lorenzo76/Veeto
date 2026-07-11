@@ -1,7 +1,7 @@
 import { FaEarthAmericas } from "react-icons/fa6";
 import { CirclePlus, Radio } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
     Select,
     SelectContent,
@@ -12,9 +12,32 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import './Home.css';
 
 export const Home = () => {
+    const location = useLocation();
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (location.state?.kicked) {
+            toast({
+                title: "Kicked from lobby",
+                description: "The host has removed you from the lobby.",
+                variant: "destructive",
+                duration: 4000,
+            });
+        } else if (location.state?.hostLeft) {
+            toast({
+                title: "Host has left",
+                description: "The host disconnected and the lobby has been closed.",
+                variant: "destructive",
+                duration: 4000,
+            });
+        }
+    }, []);
+
     return (
         <div className="flex flex-col h-screen">
             <div className="flex justify-end p-8">

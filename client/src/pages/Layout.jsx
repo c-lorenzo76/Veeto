@@ -6,7 +6,7 @@ import { Footer } from "../components/Footer.jsx";
 
 export const Layout = ({children, user, avatar}) => {
     return (
-        <div className="p-6 bg-[#e8f0e8]">
+        <div className="p-6 bg-[#e8f0e8] min-h-screen space-y-1">
             <Navbar children={children} user={user} avatar={avatar}/>
             <div>{children}</div>
             {/* <div className="grid place-items-center">{children}</div> */}

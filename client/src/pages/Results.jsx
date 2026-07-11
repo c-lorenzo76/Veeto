@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketContext";
 import { Layout } from "./Layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Clock, Phone, Globe, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { MapPin, Clock, Phone, Globe, ExternalLink, ChevronDown, ChevronUp, Timer, Trophy } from "lucide-react";
+import { FollowerPointerCard } from "@/components/ui/following-pointer";
+import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -35,9 +37,45 @@ function MapController({ selectedPlaceId, places }) {
 }
 
 
+function RemoteCursor({ user, avatar, x, y }) {
+    const motionX = useMotionValue(x);
+    const motionY = useMotionValue(y);
+    const springX = useSpring(motionX, { stiffness: 1000, damping: 50, mass: 0.1 });
+    const springY = useSpring(motionY, { stiffness: 1000, damping: 50, mass: 0.1 });
+
+    useEffect(() => {
+        motionX.set(x);
+        motionY.set(y);
+    }, [x, y]);
+
+    return (
+        <motion.div
+            className="pointer-events-none absolute z-50"
+            style={{ left: springX, top: springY }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+        >
+            <svg
+                stroke="currentColor" fill="currentColor" strokeWidth="1"
+                viewBox="0 0 16 16"
+                className="h-5 w-5 -rotate-[70deg] text-[#2d6a2d] drop-shadow"
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <path d="M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z" />
+            </svg>
+            <div className="ml-4 -mt-1 flex items-center gap-1.5 bg-[#1a2e1a] text-white text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap shadow">
+                {avatar && <img src={avatar} alt="" className="w-4 h-4 rounded-full object-cover" />}
+                <span>{user}</span>
+            </div>
+        </motion.div>
+    );
+}
+
 export const Results = () => {
     const { socket } = useSocket();
     const { code } = useParams();
+    const navigate = useNavigate();
 
     const [places, setPlaces] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,7 +83,24 @@ export const Results = () => {
     const [placeDetailsMap, setPlaceDetailsMap] = useState({});
     const [loadingDetailId, setLoadingDetailId] = useState(null);
     const [userLocation, setUserLocation] = useState(null);
+
+    // Phase / voting state
+    const [lockedPlayers, setLockedPlayers] = useState([]);
+    const [myVote, setMyVote] = useState(null);
+    const [voteCount, setVoteCount] = useState({ voted: 0, total: 0 });
+    const [timeLeft, setTimeLeft] = useState(90);
+    const [phase, setPhase] = useState('voting'); // 'voting' | 'winner'
+    const [winnerPlace, setWinnerPlace] = useState(null);
+    const [winnerDetails, setWinnerDetails] = useState(null);
+
+    const [remoteCursors, setRemoteCursors] = useState({}); // { username: { x, y, avatar } }
+
     const loadingDetailRef = useRef(null);
+    const timerIntervalRef = useRef(null);
+    const listPanelRef = useRef(null);
+    const throttleRef = useRef(null);
+
+    const isLocked = lockedPlayers.some(p => p.name === socket?.auth?.token);
 
     const youAreHereIcon = L.divIcon({
         className: '',
@@ -57,15 +112,13 @@ export const Results = () => {
         iconAnchor: [40, 8],
     });
 
-    if (!socket) {
-        console.error('Socket is not initialized..');
-        return;
-    }
+    if (!socket) return;
 
     useEffect(() => {
-        socket.on('getPlaces', ({ places, coords }) => {
+        const handleGetPlaces = ({ places, coords, lockedPlayers: lp }) => {
             setPlaces(places);
             setLoading(false);
+            if (lp) setLockedPlayers(lp);
             if (coords) {
                 const [lat, lng] = coords.split(',').map(Number);
                 setUserLocation([lat, lng]);
@@ -77,16 +130,104 @@ export const Results = () => {
                 setLoadingDetailId(first.place_id);
                 socket.emit('getPlaceDetails', { placeId: first.place_id });
             }
-        });
+        };
 
-        socket.on('placeDetails', (details) => {
+        const handlePlaceDetails = (details) => {
             const id = loadingDetailRef.current;
             if (id) {
                 setPlaceDetailsMap(prev => ({ ...prev, [id]: details }));
                 setLoadingDetailId(null);
                 loadingDetailRef.current = null;
             }
-        });
+        };
+
+        const handlePhaseStart = ({ phase: ph, duration, startedAt, lockedPlayers: lp }) => {
+            if (ph !== 'finalVote') return;
+            if (lp) setLockedPlayers(lp);
+
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+            const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+            const initial = Math.max(0, duration - elapsed);
+            setTimeLeft(initial);
+
+            timerIntervalRef.current = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timerIntervalRef.current);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        };
+
+        const handlePhaseExtend = ({ addedSeconds }) => {
+            setTimeLeft(prev => prev + addedSeconds);
+        };
+
+        const handleVoteCount = ({ voted, total }) => {
+            setVoteCount({ voted, total });
+        };
+
+        const handleWinner = ({ place }) => {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            setWinnerPlace(place);
+            setPhase('winner');
+            // Fetch full details for winner
+            if (place?.place_id) {
+                socket.emit('getPlaceDetails', { placeId: place.place_id });
+                loadingDetailRef.current = place.place_id;
+            }
+        };
+
+        // Override placeDetails to also capture winner details
+        const handlePlaceDetailsWithWinner = (details) => {
+            const id = loadingDetailRef.current;
+            if (id) {
+                setPlaceDetailsMap(prev => ({ ...prev, [id]: details }));
+                setWinnerDetails(details);
+                setLoadingDetailId(null);
+                loadingDetailRef.current = null;
+            }
+        };
+
+        socket.on('getPlaces', handleGetPlaces);
+        socket.on('placeDetails', handlePlaceDetailsWithWinner);
+        socket.on('phase_start', handlePhaseStart);
+        socket.on('phase_extend', handlePhaseExtend);
+        socket.on('restaurantVoteCount', handleVoteCount);
+        const handleHostLeft = () => navigate('/', { state: { hostLeft: true } });
+
+        const handleRemoteCursorMove = ({ user, avatar, x, y }) => {
+            setRemoteCursors(prev => ({ ...prev, [user]: { x, y, avatar } }));
+        };
+
+        const handleRemoteCursorLeave = ({ user }) => {
+            setRemoteCursors(prev => {
+                const next = { ...prev };
+                delete next[user];
+                return next;
+            });
+        };
+
+        socket.on('winner', handleWinner);
+        socket.on('hostLeft', handleHostLeft);
+        socket.on('cursorMove', handleRemoteCursorMove);
+        socket.on('cursorLeave', handleRemoteCursorLeave);
+
+        return () => {
+            socket.off('getPlaces', handleGetPlaces);
+            socket.off('placeDetails', handlePlaceDetailsWithWinner);
+            socket.off('phase_start', handlePhaseStart);
+            socket.off('phase_extend', handlePhaseExtend);
+            socket.off('restaurantVoteCount', handleVoteCount);
+            socket.off('winner', handleWinner);
+            socket.off('hostLeft', handleHostLeft);
+            socket.off('cursorMove', handleRemoteCursorMove);
+            socket.off('cursorLeave', handleRemoteCursorLeave);
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        };
     }, [code, socket]);
 
     const handleSelectPlace = (place) => {
@@ -102,192 +243,355 @@ export const Results = () => {
         }
     };
 
+    const handlePanelMouseMove = (e) => {
+        if (throttleRef.current) return;
+        throttleRef.current = setTimeout(() => { throttleRef.current = null; }, 16);
+
+        const rect = listPanelRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        socket.emit('cursorMove', { lobbyCode: code, x, y });
+    };
+
+    const handlePanelMouseLeave = () => {
+        socket.emit('cursorLeave', { lobbyCode: code });
+    };
+
+    const handleVoteRestaurant = (placeId) => {
+        if (myVote || !isLocked) return;
+        setMyVote(placeId);
+        socket.emit('voteRestaurant', { lobbyCode: code, placeId });
+    };
+
     const mapCenter = places.length > 0 && places[0].geometry?.location
         ? [places[0].geometry.location.lat, places[0].geometry.location.lng]
         : [35.85, -79.56];
 
+    const timerColor = timeLeft <= 10 ? 'text-red-500' : timeLeft <= 20 ? 'text-yellow-500' : 'text-[#1a2e1a]';
+
+    if (phase === 'winner' && winnerPlace) {
+        const details = winnerDetails || placeDetailsMap[winnerPlace.place_id];
+        return (
+            <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
+                <div className="bg-[#e8f0e8] px-6 pt-6 flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-3 mb-6">
+                        <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />
+                        <h1 className="text-3xl font-bold text-[#1a2e1a]">We're going to...</h1>
+                        <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden w-full max-w-lg">
+                        {details?.photos?.[0]?.photo_reference && (
+                            <img
+                                src={`http://localhost:8000/api/place-photo?ref=${details.photos[0].photo_reference}`}
+                                alt={winnerPlace.name}
+                                className="w-full h-52 object-cover"
+                            />
+                        )}
+                        <div className="p-6 space-y-3">
+                            <h2 className="text-2xl font-bold text-[#1a2e1a]">{winnerPlace.name}</h2>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-lg">{winnerPlace.rating}</span>
+                                <span className="text-yellow-500 text-lg">
+                                    {'★'.repeat(Math.round(winnerPlace.rating))}
+                                    {'☆'.repeat(5 - Math.round(winnerPlace.rating))}
+                                </span>
+                                <span className="text-muted-foreground text-sm">
+                                    ({winnerPlace.user_ratings_total?.toLocaleString()})
+                                </span>
+                                {winnerPlace.price_level && (
+                                    <span className="ml-auto text-muted-foreground font-medium">
+                                        {'$'.repeat(winnerPlace.price_level)}
+                                    </span>
+                                )}
+                            </div>
+
+                            {details?.formatted_address && (
+                                <div className="flex gap-2 items-start">
+                                    <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                                    <span className="text-sm">{details.formatted_address}</span>
+                                </div>
+                            )}
+                            {details?.opening_hours && (
+                                <div className="flex gap-2 items-center">
+                                    <Clock className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                    <span className={`text-sm font-semibold ${details.opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
+                                        {details.opening_hours.open_now ? 'Open now' : 'Closed'}
+                                    </span>
+                                </div>
+                            )}
+                            {details?.formatted_phone_number && (
+                                <div className="flex gap-2 items-center">
+                                    <Phone className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                    <span className="text-sm">{details.formatted_phone_number}</span>
+                                </div>
+                            )}
+                            {details?.website && (
+                                <div className="flex gap-2 items-center">
+                                    <Globe className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                    <a href={details.website} target="_blank" rel="noopener noreferrer"
+                                        className="text-sm text-[#2d6a2d] hover:underline truncate">
+                                        {details.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                                    </a>
+                                </div>
+                            )}
+                            {details?.url && (
+                                <a href={details.url} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-sm text-[#2d6a2d] hover:underline pt-1">
+                                    <ExternalLink className="w-4 h-4" />
+                                    View on Google Maps
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Layout>
+        );
+    }
+
+    // ── Voting screen ─────────────────────────────────────────
     return (
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
-            <div className="flex w-[90%] lg:w-[80%] mx-auto gap-4 pb-2 pt-4" style={{ height: 'calc(100vh - 120px)' }}>
+            <div className="bg-[#e8f0e8] px-6 pt-4 min-h-screen">
 
-                {/* Left: restaurant list */}
-                <div className="w-[40%] overflow-y-auto rounded-xl bg-white shadow-sm">
-                    {loading ? (
-                        <div className="p-4 space-y-3">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="flex items-center gap-3 p-3">
-                                    <Skeleton className="w-9 h-9 rounded-md shrink-0" />
-                                    <Skeleton className="h-4 flex-1" />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="divide-y">
-                            {places.map((place) => {
-                                const isExpanded = selectedPlaceId === place.place_id;
-                                const details = placeDetailsMap[place.place_id];
-                                const isLoadingDetails = loadingDetailId === place.place_id;
-
-                                return (
-                                    <div key={place.place_id}>
-                                        {/* Row */}
-                                        <div
-                                            className="flex items-center gap-3 p-4 cursor-pointer hover:bg-[#e8f0e8] transition-colors"
-                                            onClick={() => handleSelectPlace(place)}
-                                        >
-                                            <span className="font-medium flex-1 truncate">{place.name}</span>
-                                            {isExpanded
-                                                ? <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                                : <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                            }
-                                        </div>
-
-                                        {/* Expanded details */}
-                                        {isExpanded && (
-                                            <div className="px-5 pb-5 bg-white space-y-3">
-                                                {isLoadingDetails ? (
-                                                    <div className="space-y-2 pt-2">
-                                                        <Skeleton className="w-full h-36 rounded-lg" />
-                                                        <Skeleton className="h-4 w-32" />
-                                                        <Skeleton className="h-4 w-full" />
-                                                        <Skeleton className="h-4 w-40" />
-                                                        <Skeleton className="h-4 w-36" />
-                                                    </div>
-                                                ) : details && (
-                                                    <>
-                                                        {details.photos?.[0]?.photo_reference && (
-                                                            <img
-                                                                src={`http://localhost:8000/api/place-photo?ref=${details.photos[0].photo_reference}`}
-                                                                alt={place.name}
-                                                                className="w-full h-36 object-cover rounded-lg"
-                                                            />
-                                                        )}
-                                                        <div className="flex items-center gap-2 pt-1 flex-wrap">
-                                                            <span className="font-semibold">{details.rating}</span>
-                                                            <span className="text-yellow-500">
-                                                                {'★'.repeat(Math.round(details.rating))}
-                                                                {'☆'.repeat(5 - Math.round(details.rating))}
-                                                            </span>
-                                                            <span className="text-muted-foreground text-sm">
-                                                                ({details.user_ratings_total?.toLocaleString()})
-                                                            </span>
-                                                            {details.price_level && (
-                                                                <span className="ml-auto text-muted-foreground font-medium text-sm">
-                                                                    {'$'.repeat(details.price_level)}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {details.formatted_address && (
-                                                            <div className="flex gap-2 items-start">
-                                                                <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
-                                                                <span className="text-sm">{details.formatted_address}</span>
-                                                            </div>
-                                                        )}
-                                                        {details.opening_hours && (
-                                                            <div className="flex gap-2 items-center">
-                                                                <Clock className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                                                <span className={`text-sm font-semibold ${details.opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
-                                                                    {details.opening_hours.open_now ? 'Open now' : 'Closed'}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        {details.formatted_phone_number && (
-                                                            <div className="flex gap-2 items-center">
-                                                                <Phone className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                                                <span className="text-sm">{details.formatted_phone_number}</span>
-                                                            </div>
-                                                        )}
-                                                        {details.website && (
-                                                            <div className="flex gap-2 items-center">
-                                                                <Globe className="w-4 h-4 shrink-0 text-muted-foreground" />
-                                                                <a href={details.website} target="_blank" rel="noopener noreferrer" className="text-sm text-[#2d6a2d] hover:underline truncate">
-                                                                    {details.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
-                                                                </a>
-                                                            </div>
-                                                        )}
-                                                        {details.url && (
-                                                            <a href={details.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-[#2d6a2d] hover:underline pt-1">
-                                                                <ExternalLink className="w-4 h-4" />
-                                                                View on Google Maps
-                                                            </a>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                {/* Timer + vote count bar */}
+                <div className="flex w-[90%] lg:w-[80%] mx-auto items-center justify-between py-3">
+                    <div className="flex items-center gap-2">
+                        <Timer className={`w-5 h-5 ${timerColor}`} />
+                        <span className={`text-xl font-bold tabular-nums ${timerColor}`}>{timeLeft}s</span>
+                    </div>
+                    <div className="text-sm font-semibold text-[#1a2e1a] bg-white px-4 py-1.5 rounded-full shadow-sm">
+                        {voteCount.voted} / {voteCount.total || lockedPlayers.length} voted
+                    </div>
+                    {!isLocked && (
+                        <span className="text-sm text-[#5a7a5a] italic">👀 Watching</span>
                     )}
                 </div>
 
-                {/* Right: Leaflet map */}
-                <div className="flex-1 rounded-xl overflow-hidden shadow-sm">
-                    {loading ? (
-                        <Skeleton className="w-full h-full" />
-                    ) : places.length > 0 && (
-                        <MapContainer center={mapCenter} zoom={12} className="w-full h-full">
-                            <TileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                            />
-                            <MapController selectedPlaceId={selectedPlaceId} places={places} />
-                            {userLocation && (
-                                <Marker position={userLocation} icon={youAreHereIcon} />
-                            )}
-                            {places.map((place) => (
-                                place.geometry?.location && (
-                                    <Marker
-                                        key={place.place_id}
-                                        position={[place.geometry.location.lat, place.geometry.location.lng]}
-                                        eventHandlers={{ click: () => handleSelectPlace(place) }}
-                                    >
-                                        <Popup className="veto-popup" maxWidth={280} minWidth={240}>
-                                            {placeDetailsMap[place.place_id]?.photos?.[0]?.photo_reference && (
-                                                <img
-                                                    src={`http://localhost:8000/api/place-photo?ref=${placeDetailsMap[place.place_id].photos[0].photo_reference}`}
-                                                    alt={place.name}
-                                                    className="w-full h-32 object-cover"
-                                                />
-                                            )}
-                                            <div className="p-4 space-y-2">
-                                                <p className="font-bold text-base leading-tight">{place.name}</p>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="font-semibold text-sm">{place.rating}</span>
-                                                    <span className="text-yellow-500 text-sm">
-                                                        {'★'.repeat(Math.round(place.rating))}{'☆'.repeat(5 - Math.round(place.rating))}
-                                                    </span>
-                                                    <span className="text-gray-500 text-xs">({place.user_ratings_total?.toLocaleString()})</span>
-                                                    {place.price_level && (
-                                                        <span className="text-gray-500 text-xs ml-1">· {'$'.repeat(place.price_level)}</span>
+                <div className="flex w-[90%] lg:w-[80%] mx-auto gap-4 pb-6" style={{ height: 'calc(100vh - 160px)' }}>
+
+                    {/* Left: restaurant list with live cursors */}
+                    <FollowerPointerCard
+                        className="w-[40%] rounded-xl overflow-hidden shadow-sm"
+                        title={
+                            <div className="flex items-center gap-1.5">
+                                {socket?.auth?.avatar && (
+                                    <img src={socket.auth.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                )}
+                                <span>{socket?.auth?.token}</span>
+                            </div>
+                        }
+                    >
+                    <div
+                        ref={listPanelRef}
+                        className="relative h-full overflow-y-auto bg-white"
+                        onMouseMove={handlePanelMouseMove}
+                        onMouseLeave={handlePanelMouseLeave}
+                    >
+                        {/* Remote cursors */}
+                        <AnimatePresence>
+                            {Object.entries(remoteCursors).map(([user, { x, y, avatar }]) => (
+                                <RemoteCursor key={user} user={user} avatar={avatar} x={x} y={y} />
+                            ))}
+                        </AnimatePresence>
+                        {loading ? (
+                            <div className="p-4 space-y-3">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3">
+                                        <Skeleton className="h-4 flex-1" />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="divide-y">
+                                {places.map((place) => {
+                                    const isExpanded = selectedPlaceId === place.place_id;
+                                    const details = placeDetailsMap[place.place_id];
+                                    const isLoadingDetails = loadingDetailId === place.place_id;
+                                    const hasVotedThis = myVote === place.place_id;
+
+                                    return (
+                                        <div key={place.place_id}>
+                                            <div
+                                                className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#e8f0e8] transition-colors ${hasVotedThis ? 'bg-[#e8f0e8]' : ''}`}
+                                                onClick={() => handleSelectPlace(place)}
+                                            >
+                                                <span className="font-medium flex-1 truncate">{place.name}</span>
+                                                {hasVotedThis && (
+                                                    <span className="text-xs text-[#2d6a2d] font-semibold shrink-0">✓ Voted</span>
+                                                )}
+                                                {isExpanded
+                                                    ? <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                                    : <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                                }
+                                            </div>
+
+                                            {isExpanded && (
+                                                <div className="px-5 pb-5 bg-white space-y-3">
+                                                    {isLoadingDetails ? (
+                                                        <div className="space-y-2 pt-2">
+                                                            <Skeleton className="w-full h-36 rounded-lg" />
+                                                            <Skeleton className="h-4 w-32" />
+                                                            <Skeleton className="h-4 w-full" />
+                                                            <Skeleton className="h-4 w-40" />
+                                                        </div>
+                                                    ) : details && (
+                                                        <>
+                                                            {details.photos?.[0]?.photo_reference && (
+                                                                <img
+                                                                    src={`http://localhost:8000/api/place-photo?ref=${details.photos[0].photo_reference}`}
+                                                                    alt={place.name}
+                                                                    className="w-full h-36 object-cover rounded-lg"
+                                                                />
+                                                            )}
+                                                            <div className="flex items-center gap-2 pt-1 flex-wrap">
+                                                                <span className="font-semibold">{details.rating}</span>
+                                                                <span className="text-yellow-500">
+                                                                    {'★'.repeat(Math.round(details.rating))}
+                                                                    {'☆'.repeat(5 - Math.round(details.rating))}
+                                                                </span>
+                                                                <span className="text-muted-foreground text-sm">
+                                                                    ({details.user_ratings_total?.toLocaleString()})
+                                                                </span>
+                                                                {details.price_level && (
+                                                                    <span className="ml-auto text-muted-foreground font-medium text-sm">
+                                                                        {'$'.repeat(details.price_level)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {details.formatted_address && (
+                                                                <div className="flex gap-2 items-start">
+                                                                    <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                                                                    <span className="text-sm">{details.formatted_address}</span>
+                                                                </div>
+                                                            )}
+                                                            {details.opening_hours && (
+                                                                <div className="flex gap-2 items-center">
+                                                                    <Clock className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                                                    <span className={`text-sm font-semibold ${details.opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
+                                                                        {details.opening_hours.open_now ? 'Open now' : 'Closed'}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {details.formatted_phone_number && (
+                                                                <div className="flex gap-2 items-center">
+                                                                    <Phone className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                                                    <span className="text-sm">{details.formatted_phone_number}</span>
+                                                                </div>
+                                                            )}
+                                                            {details.website && (
+                                                                <div className="flex gap-2 items-center">
+                                                                    <Globe className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                                                    <a href={details.website} target="_blank" rel="noopener noreferrer"
+                                                                        className="text-sm text-[#2d6a2d] hover:underline truncate">
+                                                                        {details.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                            {details.url && (
+                                                                <a href={details.url} target="_blank" rel="noopener noreferrer"
+                                                                    className="flex items-center gap-2 text-sm text-[#2d6a2d] hover:underline pt-1">
+                                                                    <ExternalLink className="w-4 h-4" />
+                                                                    View on Google Maps
+                                                                </a>
+                                                            )}
+
+                                                            {/* Vote button — locked players only, one vote */}
+                                                            {isLocked && (
+                                                                <button
+                                                                    onClick={() => handleVoteRestaurant(place.place_id)}
+                                                                    disabled={!!myVote}
+                                                                    className={`mt-2 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
+                                                                        hasVotedThis
+                                                                            ? 'bg-[#2d6a2d] text-white cursor-default'
+                                                                            : myVote
+                                                                                ? 'bg-[#c8dcc8] text-[#5a7a5a] cursor-not-allowed'
+                                                                                : 'bg-[#2d6a2d] hover:bg-[#266226] text-white cursor-pointer'
+                                                                    }`}
+                                                                >
+                                                                    {hasVotedThis ? '✓ Your vote' : myVote ? 'Already voted' : 'Vote for this'}
+                                                                </button>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
-                                                {place.formatted_address && (
-                                                    <div className="flex gap-2 items-start">
-                                                        <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-400" />
-                                                        <span className="text-xs text-gray-600">{place.formatted_address}</span>
-                                                    </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                    </FollowerPointerCard>
+
+                    {/* Right: Leaflet map */}
+                    <div className="flex-1 rounded-xl overflow-hidden shadow-sm">
+                        {loading ? (
+                            <Skeleton className="w-full h-full" />
+                        ) : places.length > 0 && (
+                            <MapContainer center={mapCenter} zoom={12} className="w-full h-full">
+                                <TileLayer
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                />
+                                <MapController selectedPlaceId={selectedPlaceId} places={places} />
+                                {userLocation && (
+                                    <Marker position={userLocation} icon={youAreHereIcon} />
+                                )}
+                                {places.map((place) => (
+                                    place.geometry?.location && (
+                                        <Marker
+                                            key={place.place_id}
+                                            position={[place.geometry.location.lat, place.geometry.location.lng]}
+                                            eventHandlers={{ click: () => handleSelectPlace(place) }}
+                                        >
+                                            <Popup className="veto-popup" maxWidth={280} minWidth={240}>
+                                                {placeDetailsMap[place.place_id]?.photos?.[0]?.photo_reference && (
+                                                    <img
+                                                        src={`http://localhost:8000/api/place-photo?ref=${placeDetailsMap[place.place_id].photos[0].photo_reference}`}
+                                                        alt={place.name}
+                                                        className="w-full h-32 object-cover"
+                                                    />
                                                 )}
-                                                {placeDetailsMap[place.place_id]?.opening_hours && (
-                                                    <div className="flex gap-2 items-center">
-                                                        <Clock className="w-3.5 h-3.5 shrink-0 text-gray-400" />
-                                                        <span className={`text-sm font-medium ${placeDetailsMap[place.place_id].opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
-                                                            {placeDetailsMap[place.place_id].opening_hours.open_now ? 'Open now' : 'Closed'}
+                                                <div className="p-4 space-y-2">
+                                                    <p className="font-bold text-base leading-tight">{place.name}</p>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="font-semibold text-sm">{place.rating}</span>
+                                                        <span className="text-yellow-500 text-sm">
+                                                            {'★'.repeat(Math.round(place.rating))}{'☆'.repeat(5 - Math.round(place.rating))}
                                                         </span>
+                                                        <span className="text-gray-500 text-xs">({place.user_ratings_total?.toLocaleString()})</span>
+                                                        {place.price_level && (
+                                                            <span className="text-gray-500 text-xs ml-1">· {'$'.repeat(place.price_level)}</span>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        </Popup>
-                                    </Marker>
-                                )
-                            ))}
-                        </MapContainer>
-                    )}
+                                                    {place.formatted_address && (
+                                                        <div className="flex gap-2 items-start">
+                                                            <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-400" />
+                                                            <span className="text-xs text-gray-600">{place.formatted_address}</span>
+                                                        </div>
+                                                    )}
+                                                    {placeDetailsMap[place.place_id]?.opening_hours && (
+                                                        <div className="flex gap-2 items-center">
+                                                            <Clock className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                                                            <span className={`text-sm font-medium ${placeDetailsMap[place.place_id].opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
+                                                                {placeDetailsMap[place.place_id].opening_hours.open_now ? 'Open now' : 'Closed'}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </Popup>
+                                        </Marker>
+                                    )
+                                ))}
+                            </MapContainer>
+                        )}
+                    </div>
+
                 </div>
-
             </div>
-
         </Layout>
     );
 };

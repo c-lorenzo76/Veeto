@@ -4,7 +4,6 @@ const { Server } = require("socket.io");
 require('dotenv').config();
 const axios = require('axios');
 
-
 const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
 
@@ -35,6 +34,7 @@ app.get('/api/place-photo', async (req, res) => {
         res.status(500).send('Error fetching photo');
     }
 });
+
 const server = require("http").createServer(app);
 const io = new Server(server, {
     cors: {
@@ -45,12 +45,10 @@ const io = new Server(server, {
 
 let lobbies = {};
 
-// random code generated for lobby
 function generateCode() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase(); // all 36 a-z 1-9 characters, size 6, uppercased
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-// socket connection
 io.use((socket, next) => {
     const user = socket.handshake.auth.token;
     const avatar = socket.handshake.auth.avatar;
@@ -60,21 +58,25 @@ io.use((socket, next) => {
     next();
 });
 
-
 io.on("connection", socket => {
     console.log("user connected: ", socket.data.user);
 
     socket.on("createLobby", ({ coords }) => {
-        let code = generateCode(); // generates code
-
-        while (lobbies[code]) {             // checks to see no other lobby w/ code
-            code = generateCode();
-        }
+        let code = generateCode();
+        while (lobbies[code]) code = generateCode();
 
         lobbies[code] = {
             host: socket.data.user,
             users: [{ name: socket.data.user, avatar: socket.data.avatar || null }],
             coords: coords,
+            phase: 'lobby',
+            lockedPlayers: [],
+            currentQuestion: 0,
+            questionTimer: null,
+            questionStartedAt: null,
+            restaurantVotes: {},
+            finalVoteTimer: null,
+            places: [],
             poll: [
                 {
                     id: 1,
@@ -88,17 +90,6 @@ io.on("connection", socket => {
                 },
                 {
                     id: 2,
-                    question: "What kind of ambiance are you looking for?",
-                    options: [
-                        { id: 1, text: "Casual and Cozy", votes: [] },
-                        { id: 2, text: "Trendy and Modern", votes: [] },
-                        { id: 3, text: "Romantic and Intimate", votes: [] },
-                        { id: 4, text: "Family-friendly", votes: [] },
-                        { id: 5, text: "Lively and Social", votes: [] },
-                    ],
-                },
-                {
-                    id: 3,
                     question: "What is your preferred price range?",
                     options: [
                         { id: 1, text: "$", votes: [] },
@@ -108,7 +99,7 @@ io.on("connection", socket => {
                     ],
                 },
                 {
-                    id: 4,
+                    id: 3,
                     question: "What type of cuisine are you in the mood for?",
                     options: [
                         { id: 1, text: "Italian", votes: [] },
@@ -122,7 +113,7 @@ io.on("connection", socket => {
                     ],
                 },
                 {
-                    id: 5,
+                    id: 4,
                     question: "How far are you willing to travel?",
                     options: [
                         { id: 1, text: "Walking distance (0-1 miles)", votes: [] },
@@ -136,89 +127,192 @@ io.on("connection", socket => {
 
         socket.join(code);
         socket.emit("lobbyCreated", code);
-
-        console.log(`Lobby created with code: ${code}`);
+        console.log(`Lobby created: ${code}`);
     });
 
     socket.on("joinLobby", ({ lobbyCode }) => {
-        if (lobbies[lobbyCode]) {
-            socket.join(lobbyCode);
-            const lobbyObj = lobbies[lobbyCode];
-            if (!lobbyObj.users.some(u => u.name === socket.data.user)) {
-                lobbyObj.users.push({ name: socket.data.user, avatar: socket.data.avatar || null });
-            }
+        const lobbyObj = lobbies[lobbyCode];
+        if (!lobbyObj) return socket.emit('Error', 'Error with joinLobby');
 
-            // emit users as objects { name, avatar }
-            io.to(lobbyCode).emit("lobbyInfo", {
-                code: lobbyCode,
-                users: lobbyObj.users, // already objects
-                host: lobbyObj.host,
+        socket.join(lobbyCode);
+        if (!lobbyObj.users.some(u => u.name === socket.data.user)) {
+            lobbyObj.users.push({ name: socket.data.user, avatar: socket.data.avatar || null });
+        }
+
+        io.to(lobbyCode).emit("lobbyInfo", {
+            code: lobbyCode,
+            users: lobbyObj.users,
+            host: lobbyObj.host,
+        });
+
+        socket.emit("lobbyJoined", lobbyCode);
+        socket.emit('selfInfo', { isHost: lobbyObj.host === socket.data.user });
+
+        // Send current game state if joining mid-game (observer)
+        if (lobbyObj.phase === 'poll') {
+            socket.emit('gameStarted', { lockedPlayers: lobbyObj.lockedPlayers });
+            socket.emit('setPoll', { questions: lobbyObj.poll });
+            socket.emit('phase_start', {
+                phase: 'poll',
+                questionIndex: lobbyObj.currentQuestion,
+                duration: 30,
+                startedAt: lobbyObj.questionStartedAt,
+                lockedPlayers: lobbyObj.lockedPlayers,
             });
-
-            console.log(`User ${socket.data.user} joined lobby ${lobbyCode}`);
-
+        } else if (lobbyObj.phase === 'finalVote') {
+            socket.emit('gameStarted', { lockedPlayers: lobbyObj.lockedPlayers });
+            socket.emit('navResults');
+            if (lobbyObj.places.length > 0) {
+                socket.emit('getPlaces', {
+                    places: lobbyObj.places,
+                    coords: lobbyObj.coords,
+                    lockedPlayers: lobbyObj.lockedPlayers,
+                });
+            }
+            const voted = Object.keys(lobbyObj.restaurantVotes).length;
+            socket.emit('restaurantVoteCount', { voted, total: lobbyObj.lockedPlayers.length });
         }
-        else {
-            socket.emit('Error', 'Error with joinLobby');
-        }
+
+        console.log(`User ${socket.data.user} joined lobby ${lobbyCode}`);
     });
 
     socket.on("updateLobby", ({ lobbyCode }) => {
-        if (lobbies[lobbyCode]) {
-            const lobby = lobbies[lobbyCode];
-            io.to(lobbyCode).emit("lobbyInfo", {
-                code: lobbyCode,
-                users: lobby.users,
-                host: lobby.host,
-            });
-            console.log(`Updated lobby information on Lobby: ${lobbyCode}`)
-        } else {
-            socket.emit('Error', "Error with updateLobby");
-        }
+        const lobby = lobbies[lobbyCode];
+        if (!lobby) return socket.emit('Error', "Error with updateLobby");
+
+        io.to(lobbyCode).emit("lobbyInfo", {
+            code: lobbyCode,
+            users: lobby.users,
+            host: lobby.host,
+        });
+
+        // Tell this specific socket whether they're the host (server-authoritative)
+        socket.emit('selfInfo', { isHost: lobby.host === socket.data.user });
+
+        console.log(`Updated lobby: ${lobbyCode}`);
     });
 
     socket.on("startGame", ({ lobbyCode }) => {
-        io.to(lobbyCode).emit("gameStarted")
+        const lobby = lobbies[lobbyCode];
+        if (!lobby || lobby.host !== socket.data.user) return;
+
+        lobby.lockedPlayers = [...lobby.users];
+        lobby.phase = 'poll';
+        lobby.currentQuestion = 0;
+        lobby.restaurantVotes = {};
+
+        io.to(lobbyCode).emit("gameStarted", { lockedPlayers: lobby.lockedPlayers });
+        startQuestion(lobbyCode, 0);
+    });
+
+    socket.on("kickUser", ({ lobbyCode, targetUser }) => {
+        const lobby = lobbies[lobbyCode];
+        if (!lobby || lobby.host !== socket.data.user) return;
+
+        lobby.users = lobby.users.filter(u => u.name !== targetUser);
+
+        for (const [, s] of io.sockets.sockets) {
+            if (s.data.user === targetUser) {
+                s.emit("kicked");
+                s.leave(lobbyCode);
+                break;
+            }
+        }
+
+        io.to(lobbyCode).emit("lobbyInfo", {
+            code: lobbyCode,
+            users: lobby.users,
+            host: lobby.host,
+        });
+
+        console.log(`Host kicked ${targetUser} from lobby ${lobbyCode}`);
     });
 
     socket.on("getPollData", ({ lobbyCode }) => {
-        if (lobbies[lobbyCode]) {
-            const lobby = lobbies[lobbyCode];
+        const lobby = lobbies[lobbyCode];
+        if (!lobby) return socket.emit('Error', "Error with getPollData");
 
-            // want to know if I can just send it without doing 'questions:' bc it sets an array in another array for no reason
-            io.to(lobbyCode).emit("setPoll", {
-                questions: lobby.poll,
+        socket.emit("setPoll", { questions: lobby.poll });
+
+        // If already in poll phase, send current phase state too
+        if (lobby.phase === 'poll') {
+            socket.emit('phase_start', {
+                phase: 'poll',
+                questionIndex: lobby.currentQuestion,
+                duration: 30,
+                startedAt: lobby.questionStartedAt,
+                lockedPlayers: lobby.lockedPlayers,
             });
-
-            console.log(`Sent poll to lobby: ${lobbyCode}`);
-        } else {
-            console.log("Lobby not found for code:", lobbyCode);
-            socket.emit('Error', "Error with getPollData");
         }
+
+        console.log(`Sent poll to lobby: ${lobbyCode}`);
     });
 
-    socket.on("vote", ({ optionId, currentQuestion, lobbyCode }) => {
-        let lobby = lobbies[lobbyCode];
+    socket.on("vote", ({ optionId, lobbyCode }) => {
+        const lobby = lobbies[lobbyCode];
+        if (!lobby) return socket.emit('Error', "Error with vote, no lobby");
 
-        if (!lobby) {
-            return socket.emit('Error', "Error with vote, no lobby");
-        }
+        // Only locked-in players can vote
+        const isLocked = lobby.lockedPlayers?.some(p => p.name === socket.data.user);
+        if (!isLocked) return;
 
-        lobby.poll[currentQuestion].options.forEach((option) => {
-            option.votes = option.votes.filter((user) => user !== socket.data.user);
+        const currentQuestion = lobby.currentQuestion;
+
+        // Remove any previous vote on this question
+        lobby.poll[currentQuestion].options.forEach(option => {
+            option.votes = option.votes.filter(user => user !== socket.data.user);
         });
-        const option = lobby.poll[currentQuestion].options.find((o) => o.id === optionId);
-        if (!option) {
-            return;
-        }
+
+        const option = lobby.poll[currentQuestion].options.find(o => o.id === optionId);
+        if (!option) return;
 
         option.votes.push(socket.data.user);
 
-        io.to(lobbyCode).emit("setPoll", {
-            questions: lobby.poll,
+        io.to(lobbyCode).emit("setPoll", { questions: lobby.poll });
+
+        // Check if all locked players have voted on this question
+        const question = lobby.poll[currentQuestion];
+        const votedUsers = new Set(question.options.flatMap(o => o.votes));
+        const allVoted = lobby.lockedPlayers.every(p => votedUsers.has(p.name));
+
+        if (allVoted) {
+            clearTimeout(lobby.questionTimer);
+            advanceQuestion(lobbyCode);
+        }
+    });
+
+    socket.on("voteRestaurant", ({ lobbyCode, placeId }) => {
+        const lobby = lobbies[lobbyCode];
+        if (!lobby) return;
+
+        const isLocked = lobby.lockedPlayers?.some(p => p.name === socket.data.user);
+        if (!isLocked) return;
+
+        lobby.restaurantVotes[socket.data.user] = placeId;
+
+        const voted = Object.keys(lobby.restaurantVotes).length;
+        const total = lobby.lockedPlayers.length;
+
+        io.to(lobbyCode).emit('restaurantVoteCount', { voted, total });
+
+        if (voted === total) {
+            clearTimeout(lobby.finalVoteTimer);
+            endFinalVote(lobbyCode);
+        }
+    });
+
+    socket.on("cursorMove", ({ lobbyCode, x, y }) => {
+        socket.to(lobbyCode).emit("cursorMove", {
+            user: socket.data.user,
+            avatar: socket.data.avatar,
+            x,
+            y,
         });
     });
 
+    socket.on("cursorLeave", ({ lobbyCode }) => {
+        socket.to(lobbyCode).emit("cursorLeave", { user: socket.data.user });
+    });
 
     socket.on("getPlaceDetails", async ({ placeId }) => {
         try {
@@ -232,31 +326,21 @@ io.on("connection", socket => {
         }
     });
 
-    socket.on("pollEnded", async ({ code }) => {
-        if (lobbies[code]) {
-
-            io.to(code).emit("navResults");
-
-            try {
-                await emitGetPlaces(code); // Await the promise
-                console.log('Sent to function emitGetPlaces');
-            } catch (error) {
-                console.error('Error in emitGetPlaces:', error);
-            }
-
-        } else {
-            console.log("Lobby not found for code:", code);
-            socket.emit('Error', "Error with getPollData");
-        }
-    });
-
     socket.on("disconnect", () => {
-        // inside socket.on("disconnect", ...)
         for (const [code, lobby] of Object.entries(lobbies)) {
             if (lobby.users.some(u => u.name === socket.data.user)) {
 
-                lobby.users = lobby.users.filter(u => u.name !== socket.data.user);
+                // Host left — destroy the lobby
+                if (lobby.host === socket.data.user) {
+                    clearTimeout(lobby.questionTimer);
+                    clearTimeout(lobby.finalVoteTimer);
+                    io.to(code).emit('hostLeft');
+                    delete lobbies[code];
+                    console.log(`Host left — lobby ${code} destroyed`);
+                    return;
+                }
 
+                lobby.users = lobby.users.filter(u => u.name !== socket.data.user);
                 lobby.poll.forEach(question => {
                     question.options.forEach(option => {
                         option.votes = option.votes.filter(vote => vote !== socket.data.user);
@@ -265,7 +349,7 @@ io.on("connection", socket => {
 
                 if (lobby.users.length === 0) {
                     delete lobbies[code];
-                    console.log(`Lobby with code ${code} has been removed`)
+                    console.log(`Lobby ${code} removed — no users left`);
                 } else {
                     socket.broadcast.to(code).emit("userDisconnect", socket.data.user);
                 }
@@ -273,34 +357,144 @@ io.on("connection", socket => {
             }
         }
     });
-
 });
+
+// ── Game flow helpers ─────────────────────────────────────────
+
+function startQuestion(code, questionIndex) {
+    const lobby = lobbies[code];
+    if (!lobby) return;
+
+    lobby.currentQuestion = questionIndex;
+    lobby.questionStartedAt = Date.now();
+
+    if (lobby.questionTimer) clearTimeout(lobby.questionTimer);
+    lobby.questionTimer = setTimeout(() => advanceQuestion(code), 30_000);
+
+    io.to(code).emit('phase_start', {
+        phase: 'poll',
+        questionIndex,
+        duration: 30,
+        startedAt: lobby.questionStartedAt,
+        lockedPlayers: lobby.lockedPlayers,
+    });
+
+    console.log(`Question ${questionIndex} started in lobby ${code}`);
+}
+
+function advanceQuestion(code) {
+    const lobby = lobbies[code];
+    if (!lobby) return;
+
+    const currentQ = lobby.poll[lobby.currentQuestion];
+    const hasAnyVotes = currentQ.options.some(o => o.votes.length > 0);
+
+    if (!hasAnyVotes) {
+        const extension = 10;
+        io.to(code).emit('phase_extend', { addedSeconds: extension });
+        lobby.questionTimer = setTimeout(() => advanceQuestion(code), extension * 1000);
+        console.log(`No votes in lobby ${code} — extending by ${extension}s`);
+        return;
+    }
+
+    if (lobby.currentQuestion < lobby.poll.length - 1) {
+        startQuestion(code, lobby.currentQuestion + 1);
+    } else {
+        endPoll(code);
+    }
+}
+
+async function endPoll(code) {
+    const lobby = lobbies[code];
+    if (!lobby) return;
+
+    lobby.phase = 'finalVote';
+    lobby.restaurantVotes = {};
+
+    io.to(code).emit("navResults");
+
+    try {
+        await emitGetPlaces(code);
+
+        const duration = 90;
+        const startedAt = Date.now();
+        lobby.finalVoteTimer = setTimeout(() => endFinalVote(code), duration * 1000);
+
+        io.to(code).emit('phase_start', {
+            phase: 'finalVote',
+            duration,
+            startedAt,
+            lockedPlayers: lobby.lockedPlayers,
+        });
+
+        console.log(`Final vote started in lobby ${code}`);
+    } catch (error) {
+        console.error('Error in endPoll:', error);
+    }
+}
+
+function endFinalVote(code) {
+    const lobby = lobbies[code];
+    if (!lobby) return;
+
+    const votes = lobby.restaurantVotes || {};
+    const voteCount = Object.keys(votes).length;
+
+    if (voteCount === 0) {
+        const extension = 15;
+        io.to(code).emit('phase_extend', { addedSeconds: extension });
+        lobby.finalVoteTimer = setTimeout(() => endFinalVote(code), extension * 1000);
+        console.log(`No restaurant votes in lobby ${code} — extending by ${extension}s`);
+        return;
+    }
+
+    // Tally votes
+    const tally = {};
+    for (const placeId of Object.values(votes)) {
+        tally[placeId] = (tally[placeId] || 0) + 1;
+    }
+
+    const maxVotes = Math.max(...Object.values(tally));
+    const tied = Object.keys(tally).filter(id => tally[id] === maxVotes);
+    const winnerPlaceId = tied[Math.floor(Math.random() * tied.length)];
+    const winnerPlace = lobby.places?.find(p => p.place_id === winnerPlaceId);
+
+    lobby.phase = 'done';
+
+    io.to(code).emit('winner', { place: winnerPlace });
+    console.log(`Winner in lobby ${code}: ${winnerPlace?.name}`);
+}
 
 async function emitGetPlaces(code) {
     const lobby = lobbies[code];
+    if (!lobby) return;
 
-    if (lobby) {
-        const selectedOptions = getMostVotedOptions(lobby);
-        const places = await searchPlaces(selectedOptions, lobby.coords);
+    const selectedOptions = getMostVotedOptions(lobby);
+    const places = await searchPlaces(selectedOptions, lobby.coords);
 
-        io.to(code).emit('getPlaces', { places, coords: lobby.coords });
-        console.log('SENT TO RESULTS', places[0]);
-    }
+    lobby.places = places;
+
+    io.to(code).emit('getPlaces', {
+        places,
+        coords: lobby.coords,
+        lockedPlayers: lobby.lockedPlayers,
+    });
+
+    console.log('SENT TO RESULTS', places[0]);
 }
 
 function getMostVotedOptions(lobby) {
     return lobby.poll.map((question) => {
         const maxVotes = Math.max(...question.options.map(o => o.votes.length));
         const tied = question.options.filter(o => o.votes.length === maxVotes);
-        // if tied, randomly pick one
         return tied[Math.floor(Math.random() * tied.length)].text;
     });
 }
 
 async function searchPlaces(selectedOptions, coords) {
     const ambiance = selectedOptions[1];
-    const cuisine  = selectedOptions[3];
-    const distance = selectedOptions[4];
+    const cuisine  = selectedOptions[2];
+    const distance = selectedOptions[3];
 
     const distanceToRadius = {
         "Walking distance (0-1 miles)": 1610,
