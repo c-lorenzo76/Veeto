@@ -207,42 +207,95 @@ done
 
 ### 8. Set Up GitHub OIDC Federation
 
-Create Azure AD app registrations and configure OIDC trust:
+Replace `c-lorenzo76/Veeto` below with your actual `<owner>/<repo>` if different.
+
+**Note on shell comments:** if pasting multi-line blocks into an interactive `zsh` session, strip any `#` comment lines first — interactive zsh doesn't treat `#` as a comment by default, so a standalone comment line fails with `command not found: #`. It's usually harmless (the real commands on other lines still run), but the blocks below are written comment-free to avoid the issue entirely, and each step includes its own verification command so a partial failure is easy to catch.
+
+**1. Create an app registration per environment:**
 
 ```bash
-# Create app registration per environment
 for env in dev1 dev uat prod; do
   az ad app create --display-name "veto-$env-github"
 done
 ```
 
-Configure OIDC (GitHub docs: https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure):
-
-1. For each app registration, add a Federated Identity Credential
-2. Set Issuer: `https://token.actions.githubusercontent.com`
-3. Set Subject: `repo:your-org/veto:ref:refs/heads/main` (or appropriate branch)
-
-Get credentials and store as GitHub environment secrets:
+**2. Create the service principal for each app registration** (`az ad app create` only creates the app registration, not the service principal Azure actually authenticates against):
 
 ```bash
-# For each app registration, get:
-az ad app show --id <app-id> --query appId -o tsv  # AZURE_CLIENT_ID
-az account show --query tenantId -o tsv  # AZURE_TENANT_ID
-az account show --query id -o tsv  # AZURE_SUBSCRIPTION_ID
+for env in dev1 dev uat prod; do
+  APP_ID=$(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv)
+  az ad sp create --id $APP_ID
+done
 ```
 
-Store in GitHub as **Environment Secrets** (not Repository Secrets):
-- Settings → Environments → Create environment (dev1, dev, uat, prod)
-- Add secrets: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-- Add `AZURE_STATIC_WEB_APPS_API_TOKEN` for Static Web App deployment
+**3. Add a federated identity credential per app**, scoped to the GitHub **Environment** rather than a specific branch. `deploy.yml`'s jobs already run under `environment: name: dev1/dev/uat/prod`, and Azure federated credential subjects require an exact string match (no wildcards) — an environment-scoped subject means any branch that resolves to that environment can authenticate, which matches this repo's branch→environment mapping without needing one credential per branch name:
 
-### 9. Configure Environment Protection Rules (optional but recommended)
+```bash
+for env in dev1 dev uat prod; do
+  APP_ID=$(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv)
+  az ad app federated-credential create --id $APP_ID --parameters "{\"name\":\"github-$env\",\"issuer\":\"https://token.actions.githubusercontent.com\",\"subject\":\"repo:c-lorenzo76/Veeto:environment:$env\",\"audiences\":[\"api://AzureADTokenExchange\"]}"
+done
+```
 
-In GitHub, protect branches that feed deployment:
+Verify:
+```bash
+for env in dev1 dev uat prod; do
+  echo "=== $env ==="
+  APP_ID=$(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv)
+  az ad app federated-credential list --id $APP_ID --query "[].{name:name, subject:subject}" -o table
+done
+```
 
-1. Settings → Branches → Add branch protection rule
-2. For `develop`, `uat`, `main`: require approval before merge
-3. Optionally restrict approvers (e.g., admins-only for Prod)
+**4. Grant each service principal the permissions `deploy.yml` actually exercises** — read its Key Vault, push to the shared ACR, and update its Container App:
+
+```bash
+for env in dev1 dev uat prod; do
+  APP_ID=$(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv)
+  SP_ID=$(az ad sp show --id $APP_ID --query id -o tsv)
+  az role assignment create --role "Key Vault Secrets User" --assignee $SP_ID --scope $(az keyvault show --name veto-${env}-kv --query id -o tsv)
+  az role assignment create --role "AcrPush" --assignee $SP_ID --scope $(az acr show --name vetoacr --query id -o tsv)
+  az role assignment create --role "Container Apps Contributor" --assignee $SP_ID --scope $(az group show --name veto-$env --query id -o tsv)
+done
+```
+
+Verify:
+```bash
+for env in dev1 dev uat prod; do
+  echo "=== $env ==="
+  SP_ID=$(az ad sp show --id $(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv) --query id -o tsv)
+  az role assignment list --assignee $SP_ID --query "[].roleDefinitionName" -o tsv
+done
+```
+Each environment should list all 3 roles.
+
+**5. Get the values and store them as GitHub Environment Secrets:**
+
+```bash
+for env in dev1 dev uat prod; do
+  echo "=== $env ==="
+  echo "AZURE_CLIENT_ID: $(az ad app list --display-name "veto-$env-github" --query "[0].appId" -o tsv)"
+done
+
+echo "AZURE_TENANT_ID (same for all envs): $(az account show --query tenantId -o tsv)"
+echo "AZURE_SUBSCRIPTION_ID (same for all envs): $(az account show --query id -o tsv)"
+```
+
+Go to GitHub → **Settings → Environments** → for each of `dev1`, `dev`, `uat`, `prod`, add:
+- `AZURE_CLIENT_ID` — the environment-specific appId from above (different per environment)
+- `AZURE_TENANT_ID` — same value for all 4
+- `AZURE_SUBSCRIPTION_ID` — same value for all 4
+- `AZURE_STATIC_WEB_APPS_API_TOKEN` — the per-environment token retrieved back in step 5 (Static Web Apps)
+
+### 9. Configure Environment Protection Rules
+
+Done via GitHub Environments, not branch protection rules — "Required reviewers" is configured per-environment (Settings → Environments → [env] → Required reviewers).
+
+**Note:** required reviewers doesn't need GitHub Teams — you can add individual usernames directly, including yourself. If you're a solo developer, listing yourself as the required reviewer isn't real access control (GitHub doesn't prevent self-approval on environment protection rules the way it can for PR reviews), but it still adds a deliberate manual confirmation step before a deploy to dev/uat/prod proceeds, which is worth having. Add real teammates as reviewers once you have collaborators — no org/Teams feature required until you want a single named group standing in for multiple people.
+
+1. Settings → Environments → `dev` → Required reviewers → add yourself (and later, teammates)
+2. Repeat for `uat`
+3. Repeat for `prod` — restrict to admins/trusted reviewers only once you have more than one collaborator
+4. Leave `dev1` without a protection rule — it should stay auto-deploy
 
 ### 10. Test the Pipeline
 
