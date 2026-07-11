@@ -21,7 +21,7 @@ on:
           - prod
 
 env:
-  REGISTRY: acr.azure.io
+  REGISTRY_NAME: vetoacr
   IMAGE_NAME: veto-server
 
 permissions:
@@ -95,29 +95,29 @@ jobs:
       - name: Build and push server image
         run: |
           ENV=${{ needs.determine-env.outputs.environment }}
-          REGISTRY_LOGIN_SERVER="${ENV}acr.azurecr.io"
+          REGISTRY_LOGIN_SERVER="${{ env.REGISTRY_NAME }}.azurecr.io"
 
-          az acr login --name ${ENV}acr
+          az acr login --name ${{ env.REGISTRY_NAME }}
 
-          docker build -t $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }} \
-                       -t $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:latest \
+          docker build -t $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${ENV}-${{ github.sha }} \
+                       -t $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${ENV}-latest \
                        -f Dockerfile .
 
-          docker push $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}
-          docker push $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:latest
+          docker push $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${ENV}-${{ github.sha }}
+          docker push $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${ENV}-latest
 
       # Deploy server to Container App
       - name: Deploy server to Container App
         run: |
           ENV=${{ needs.determine-env.outputs.environment }}
-          REGISTRY_LOGIN_SERVER="${ENV}acr.azurecr.io"
+          REGISTRY_LOGIN_SERVER="${{ env.REGISTRY_NAME }}.azurecr.io"
           RESOURCE_GROUP="veto-${ENV}"
           CONTAINER_APP="veto-server-${ENV}"
 
           az containerapp update \
             --name $CONTAINER_APP \
             --resource-group $RESOURCE_GROUP \
-            --image $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }} \
+            --image $REGISTRY_LOGIN_SERVER/$IMAGE_NAME:${ENV}-${{ github.sha }} \
             --set-env-vars "SECRET_KEY=${{ steps.keyvault.outputs.secret_key }}" \
                            "CLIENT_ORIGIN=${{ steps.keyvault.outputs.client_origin }}" \
                            "NODE_ENV=${{ env.NODE_ENV }}"

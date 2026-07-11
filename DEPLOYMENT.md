@@ -72,19 +72,15 @@ az group create --name veto-uat --location eastus
 az group create --name veto-prod --location eastus
 ```
 
-### 2. Create Azure Container Registry (per environment or shared)
+### 2. Create Azure Container Registry (shared)
 
-Option A: Shared registry (simpler, recommended for starting)
+`deploy.yml` is configured to use a single shared registry across all 4 environments, with images tagged per-environment (`veto-server:dev1-<sha>`, `veto-server:prod-<sha>`, etc.). This is the industry-standard pattern — the registry itself doesn't need per-environment isolation, only the deploy target (Container App) and secrets (Key Vault) do.
+
 ```bash
 az acr create --resource-group veto-prod --name vetoacr --sku Basic
 ```
 
-Option B: Per-environment registry
-```bash
-for env in dev1 dev uat prod; do
-  az acr create --resource-group veto-$env --name ${env}acr --sku Basic
-done
-```
+Grant each Container App's managed identity `AcrPull` access to the shared registry (done in step 7, after Container Apps exist).
 
 ### 3. Create Container App Environment (per resource group)
 
