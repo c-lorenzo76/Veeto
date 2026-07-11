@@ -20,6 +20,10 @@ const photoLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
 app.get('/api/place-photo', photoLimiter, async (req, res) => {
     const { ref } = req.query;
     if (!ref) return res.status(400).send('Missing photo_reference');
