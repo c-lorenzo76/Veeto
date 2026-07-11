@@ -283,7 +283,7 @@ export const Results = () => {
                 <div className="bg-[#e8f0e8] px-6 pt-6 flex flex-col items-center justify-center">
                     <div className="flex items-center gap-3 mb-6">
                         <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />
-                        <h1 className="text-3xl font-bold text-[#1a2e1a]">We're going to...</h1>
+                        <h1 className="text-3xl font-bold text-[#1a2e1a]">We&apos;re going to...</h1>
                         <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />
                     </div>
 

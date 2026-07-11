@@ -1,5 +1,4 @@
 // AvatarSelection.jsx
-import React from 'react';
 import alien from '../assets/avatar-pfp/Alien.svg';
 import batman from '../assets/avatar-pfp/Batman.svg';
 import chickenLeg from '../assets/avatar-pfp/ChickenLeg.svg';
@@ -8,17 +7,17 @@ import hotdog from '../assets/avatar-pfp/hotdog.svg';
 import ironMan from '../assets/avatar-pfp/IronMan.svg';
 import sailorCat from '../assets/avatar-pfp/Sailor-Cat.svg';
 import wolverine from "../assets/avatar-pfp/Wolverine.svg";
-import chocobar from "../assets/avatar-pfp/chocobar.svg";
-import cookie from "../assets/avatar-pfp/cookie.svg";
-import cptamerica from "../assets/avatar-pfp/cptamerica.svg";
-import goofy from "../assets/avatar-pfp/goofy.svg";
-import hamburger from "../assets/avatar-pfp/hamburger.svg";
-import icecream from "../assets/avatar-pfp/icecream.svg";
-import mulan from "../assets/avatar-pfp/mulan.svg";
-import pizza from "../assets/avatar-pfp/pizza.svg";
-import poohbear from "../assets/avatar-pfp/poohbear.svg";
-import popcorn from "../assets/avatar-pfp/popcorn.svg";
-import sailormoon from "../assets/avatar-pfp/sailormoon.svg";
+import chocobar from "../assets/avatar-pfp/Chocobar.svg";
+import cookie from "../assets/avatar-pfp/Cookie.svg";
+import cptamerica from "../assets/avatar-pfp/CptAmerica.svg";
+import goofy from "../assets/avatar-pfp/Goofy.svg";
+import hamburger from "../assets/avatar-pfp/Hamburger.svg";
+import icecream from "../assets/avatar-pfp/IceCream.svg";
+import mulan from "../assets/avatar-pfp/Mulan.svg";
+import pizza from "../assets/avatar-pfp/Pizza.svg";
+import poohbear from "../assets/avatar-pfp/Poohbear.svg";
+import popcorn from "../assets/avatar-pfp/Popcorn.svg";
+import sailormoon from "../assets/avatar-pfp/Sailormoon.svg";
 import snowWhite from "../assets/avatar-pfp/Snow-White.svg";
 
 const avatars = {

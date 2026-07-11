@@ -129,7 +129,7 @@ export const Join = () => {
                             </Dialog>
                         </div>
                         <CardDescription className={"text-center"}>
-                            Select an avatar if you'd like...
+                            Select an avatar if you&apos;d like...
                         </CardDescription>
                         <div className="grid gap-2">
                             <Label htmlFor="name">Name</Label>

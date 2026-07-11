@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { User, Dot, ChevronsLeft, ChevronsRight, Copy, XCircle } from 'lucide-react';
+import { Copy, XCircle } from 'lucide-react';
 import { Footer } from "@/components/Footer";
 import { useSocket } from "@/SocketContext";
 import { useState, useEffect } from "react";
