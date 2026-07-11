@@ -23,6 +23,8 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 function MapController({ selectedPlaceId, places }) {
     const map = useMap();
     useEffect(() => {
@@ -290,7 +292,7 @@ export const Results = () => {
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden w-full max-w-lg">
                         {details?.photos?.[0]?.photo_reference && (
                             <img
-                                src={`http://localhost:8000/api/place-photo?ref=${details.photos[0].photo_reference}`}
+                                src={`${API_BASE_URL}/api/place-photo?ref=${details.photos[0].photo_reference}`}
                                 alt={winnerPlace.name}
                                 className="w-full h-52 object-cover"
                             />
@@ -447,7 +449,7 @@ export const Results = () => {
                                                         <>
                                                             {details.photos?.[0]?.photo_reference && (
                                                                 <img
-                                                                    src={`http://localhost:8000/api/place-photo?ref=${details.photos[0].photo_reference}`}
+                                                                    src={`${API_BASE_URL}/api/place-photo?ref=${details.photos[0].photo_reference}`}
                                                                     alt={place.name}
                                                                     className="w-full h-36 object-cover rounded-lg"
                                                                 />
@@ -556,7 +558,7 @@ export const Results = () => {
                                             <Popup className="veto-popup" maxWidth={280} minWidth={240}>
                                                 {placeDetailsMap[place.place_id]?.photos?.[0]?.photo_reference && (
                                                     <img
-                                                        src={`http://localhost:8000/api/place-photo?ref=${placeDetailsMap[place.place_id].photos[0].photo_reference}`}
+                                                        src={`${API_BASE_URL}/api/place-photo?ref=${placeDetailsMap[place.place_id].photos[0].photo_reference}`}
                                                         alt={place.name}
                                                         className="w-full h-32 object-cover"
                                                     />
