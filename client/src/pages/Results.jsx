@@ -195,7 +195,10 @@ export const Results = () => {
         socket.on('phase_start', handlePhaseStart);
         socket.on('phase_extend', handlePhaseExtend);
         socket.on('restaurantVoteCount', handleVoteCount);
-        const handleHostLeft = () => navigate('/', { state: { hostLeft: true } });
+        const handleHostLeft = () => {
+            socket.disconnect();
+            navigate('/', { state: { hostLeft: true } });
+        };
 
         const handleRemoteCursorMove = ({ user, avatar, x, y }) => {
             setRemoteCursors(prev => ({ ...prev, [user]: { x, y, avatar } }));

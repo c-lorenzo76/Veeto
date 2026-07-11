@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const PLAYER_LEAVE_MESSAGE =
     "Leave the game? You'll be removed and the others will continue without you.";
@@ -17,9 +17,11 @@ const HOST_LEAVE_MESSAGE =
  */
 export function useLeaveGuard({ socket, code, isHost: isHostProp }) {
     const navigate = useNavigate();
+    const location = useLocation();
     const isHostRef = useRef(isHostProp ?? false);
     const socketRef = useRef(socket);
     const codeRef = useRef(code);
+    const guardPathRef = useRef(location.pathname + location.search);
 
     useEffect(() => {
         if (isHostProp !== undefined) isHostRef.current = isHostProp;
@@ -54,14 +56,19 @@ export function useLeaveGuard({ socket, code, isHost: isHostProp }) {
     }, []);
 
     useEffect(() => {
-        window.history.pushState(null, '', window.location.href);
+        // Pushed through React Router's own navigate (not raw window.history.pushState)
+        // so its internal location/index tracking stays in sync with the real browser
+        // history stack — pushState never fires popstate, so React Router has no way
+        // to observe a raw pushState call, which otherwise silently desyncs its state
+        // and can break subsequent navigate() calls after a leave/re-enter cycle.
+        navigate(guardPathRef.current, { replace: false });
 
         const handlePopState = () => {
             const host = isHostRef.current;
             const confirmed = window.confirm(host ? HOST_LEAVE_MESSAGE : PLAYER_LEAVE_MESSAGE);
 
             if (!confirmed) {
-                window.history.pushState(null, '', window.location.href);
+                navigate(guardPathRef.current, { replace: false });
                 return;
             }
 
@@ -70,6 +77,10 @@ export function useLeaveGuard({ socket, code, isHost: isHostProp }) {
             if (host && sock && lobbyCode) {
                 sock.emit('transferHost', { lobbyCode });
             }
+            // The socket is now shared app-wide (not recreated per route), so leaving
+            // has to disconnect explicitly — otherwise the server never sees a
+            // disconnect event and won't remove this player from lobby.users.
+            sock?.disconnect();
 
             navigate('/', { replace: true });
         };

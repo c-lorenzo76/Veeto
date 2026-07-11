@@ -48,10 +48,12 @@ export const Lobby = () => {
         });
 
         socket.on("kicked", () => {
+            socket.disconnect();
             navigate('/', { state: { kicked: true } });
         });
 
         socket.on("hostLeft", () => {
+            socket.disconnect();
             navigate('/', { state: { hostLeft: true } });
         });
 
