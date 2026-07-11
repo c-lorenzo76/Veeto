@@ -645,6 +645,9 @@ async function searchPlaces(selectedOptions, coords) {
 
     try {
         const response = await axios.get(url);
+        if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+            console.error('Places API error:', response.data.status, response.data.error_message);
+        }
         return response.data.results;
     } catch (error) {
         console.error('Error searching places:', error);
