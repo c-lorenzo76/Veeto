@@ -648,6 +648,8 @@ async function searchPlaces(selectedOptions, coords) {
     }
 }
 
-server.listen(8000, () => {
-    console.log("Listening on Port:8000");
-});
+if (require.main === module) {
+    server.listen(8000, () => {
+        console.log("Listening on Port:8000");
+    });
+}
