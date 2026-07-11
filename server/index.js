@@ -3,13 +3,24 @@ const express = require("express");
 const { Server } = require("socket.io");
 require('dotenv').config();
 const axios = require('axios');
+const { z } = require('zod');
+const rateLimit = require('express-rate-limit');
+
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 const app = express();
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: CLIENT_ORIGIN }));
 
 const photoCache = new Map();
 
-app.get('/api/place-photo', async (req, res) => {
+const photoLimiter = rateLimit({
+    windowMs: 60_000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.get('/api/place-photo', photoLimiter, async (req, res) => {
     const { ref } = req.query;
     if (!ref) return res.status(400).send('Missing photo_reference');
 
@@ -38,7 +49,7 @@ app.get('/api/place-photo', async (req, res) => {
 const server = require("http").createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173",
+        origin: CLIENT_ORIGIN,
         methods: ["GET", "POST"],
     },
 });
@@ -58,10 +69,77 @@ io.use((socket, next) => {
     next();
 });
 
+// ── Input validation ──────────────────────────────────────────
+
+const lobbyCodeSchema = z.string().regex(/^[A-Z0-9]{6}$/);
+const usernameSchema = z.string().min(1).max(30);
+const placeIdSchema = z.string().min(1).max(200);
+
+const schemas = {
+    createLobby: z.object({
+        coords: z.string().regex(/^-?\d{1,3}(\.\d+)?,-?\d{1,3}(\.\d+)?$/),
+    }),
+    joinLobby: z.object({ lobbyCode: lobbyCodeSchema }),
+    updateLobby: z.object({ lobbyCode: lobbyCodeSchema }),
+    startGame: z.object({ lobbyCode: lobbyCodeSchema }),
+    kickUser: z.object({ lobbyCode: lobbyCodeSchema, targetUser: usernameSchema }),
+    getPollData: z.object({ lobbyCode: lobbyCodeSchema }),
+    vote: z.object({ optionId: z.number().int().positive(), lobbyCode: lobbyCodeSchema }),
+    voteRestaurant: z.object({ lobbyCode: lobbyCodeSchema, placeId: placeIdSchema }),
+    cursorMove: z.object({
+        lobbyCode: lobbyCodeSchema,
+        x: z.number().finite(),
+        y: z.number().finite(),
+    }),
+    cursorLeave: z.object({ lobbyCode: lobbyCodeSchema }),
+    getPlaceDetails: z.object({ placeId: placeIdSchema }),
+    transferHost: z.object({ lobbyCode: lobbyCodeSchema }),
+};
+
+function withValidation(socket, schema, handler) {
+    return (payload) => {
+        const result = schema.safeParse(payload);
+        if (!result.success) {
+            socket.emit('Error', 'Invalid request');
+            return;
+        }
+        return handler(result.data);
+    };
+}
+
+// ── Per-socket rate limiting ──────────────────────────────────
+
+const socketRateLimits = new Map();
+
+function isRateLimited(socket, key, limit, windowMs) {
+    const now = Date.now();
+    const mapKey = `${socket.id}:${key}`;
+    const entry = socketRateLimits.get(mapKey) || { count: 0, windowStart: now };
+
+    if (now - entry.windowStart > windowMs) {
+        entry.count = 0;
+        entry.windowStart = now;
+    }
+
+    entry.count += 1;
+    socketRateLimits.set(mapKey, entry);
+    return entry.count > limit;
+}
+
+function clearRateLimits(socket) {
+    for (const key of socketRateLimits.keys()) {
+        if (key.startsWith(`${socket.id}:`)) socketRateLimits.delete(key);
+    }
+}
+
 io.on("connection", socket => {
     console.log("user connected: ", socket.data.user);
 
-    socket.on("createLobby", ({ coords }) => {
+    socket.on("createLobby", withValidation(socket, schemas.createLobby, ({ coords }) => {
+        if (isRateLimited(socket, 'createLobby', 5, 60_000)) {
+            return socket.emit('Error', 'Too many lobbies created — slow down');
+        }
+
         let code = generateCode();
         while (lobbies[code]) code = generateCode();
 
@@ -128,9 +206,9 @@ io.on("connection", socket => {
         socket.join(code);
         socket.emit("lobbyCreated", code);
         console.log(`Lobby created: ${code}`);
-    });
+    }));
 
-    socket.on("joinLobby", ({ lobbyCode }) => {
+    socket.on("joinLobby", withValidation(socket, schemas.joinLobby, ({ lobbyCode }) => {
         const lobbyObj = lobbies[lobbyCode];
         if (!lobbyObj) return socket.emit('Error', 'Error with joinLobby');
 
@@ -174,9 +252,9 @@ io.on("connection", socket => {
         }
 
         console.log(`User ${socket.data.user} joined lobby ${lobbyCode}`);
-    });
+    }));
 
-    socket.on("updateLobby", ({ lobbyCode }) => {
+    socket.on("updateLobby", withValidation(socket, schemas.updateLobby, ({ lobbyCode }) => {
         const lobby = lobbies[lobbyCode];
         if (!lobby) return socket.emit('Error', "Error with updateLobby");
 
@@ -190,9 +268,9 @@ io.on("connection", socket => {
         socket.emit('selfInfo', { isHost: lobby.host === socket.data.user });
 
         console.log(`Updated lobby: ${lobbyCode}`);
-    });
+    }));
 
-    socket.on("startGame", ({ lobbyCode }) => {
+    socket.on("startGame", withValidation(socket, schemas.startGame, ({ lobbyCode }) => {
         const lobby = lobbies[lobbyCode];
         if (!lobby || lobby.host !== socket.data.user) return;
 
@@ -203,9 +281,9 @@ io.on("connection", socket => {
 
         io.to(lobbyCode).emit("gameStarted", { lockedPlayers: lobby.lockedPlayers });
         startQuestion(lobbyCode, 0);
-    });
+    }));
 
-    socket.on("kickUser", ({ lobbyCode, targetUser }) => {
+    socket.on("kickUser", withValidation(socket, schemas.kickUser, ({ lobbyCode, targetUser }) => {
         const lobby = lobbies[lobbyCode];
         if (!lobby || lobby.host !== socket.data.user) return;
 
@@ -226,9 +304,44 @@ io.on("connection", socket => {
         });
 
         console.log(`Host kicked ${targetUser} from lobby ${lobbyCode}`);
-    });
+    }));
 
-    socket.on("getPollData", ({ lobbyCode }) => {
+    socket.on("transferHost", withValidation(socket, schemas.transferHost, ({ lobbyCode }) => {
+        const lobby = lobbies[lobbyCode];
+        if (!lobby || lobby.host !== socket.data.user) return;
+
+        const successor = lobby.users.find(u => u.name !== socket.data.user);
+
+        if (!successor) {
+            clearTimeout(lobby.questionTimer);
+            clearTimeout(lobby.finalVoteTimer);
+            io.to(lobbyCode).emit('hostLeft');
+            delete lobbies[lobbyCode];
+            console.log(`Host left with no successor — lobby ${lobbyCode} destroyed`);
+            return;
+        }
+
+        lobby.host = successor.name;
+
+        io.to(lobbyCode).emit('lobbyInfo', {
+            code: lobbyCode,
+            users: lobby.users,
+            host: lobby.host,
+        });
+        io.to(lobbyCode).emit('hostTransferred', { newHost: successor.name });
+
+        const room = io.sockets.adapter.rooms.get(lobbyCode);
+        if (room) {
+            for (const socketId of room) {
+                const s = io.sockets.sockets.get(socketId);
+                if (s) s.emit('selfInfo', { isHost: lobby.host === s.data.user });
+            }
+        }
+
+        console.log(`Host transferred in lobby ${lobbyCode}: ${socket.data.user} -> ${successor.name}`);
+    }));
+
+    socket.on("getPollData", withValidation(socket, schemas.getPollData, ({ lobbyCode }) => {
         const lobby = lobbies[lobbyCode];
         if (!lobby) return socket.emit('Error', "Error with getPollData");
 
@@ -246,9 +359,11 @@ io.on("connection", socket => {
         }
 
         console.log(`Sent poll to lobby: ${lobbyCode}`);
-    });
+    }));
 
-    socket.on("vote", ({ optionId, lobbyCode }) => {
+    socket.on("vote", withValidation(socket, schemas.vote, ({ optionId, lobbyCode }) => {
+        if (isRateLimited(socket, 'vote', 10, 2_000)) return;
+
         const lobby = lobbies[lobbyCode];
         if (!lobby) return socket.emit('Error', "Error with vote, no lobby");
 
@@ -279,9 +394,11 @@ io.on("connection", socket => {
             clearTimeout(lobby.questionTimer);
             advanceQuestion(lobbyCode);
         }
-    });
+    }));
 
-    socket.on("voteRestaurant", ({ lobbyCode, placeId }) => {
+    socket.on("voteRestaurant", withValidation(socket, schemas.voteRestaurant, ({ lobbyCode, placeId }) => {
+        if (isRateLimited(socket, 'voteRestaurant', 10, 2_000)) return;
+
         const lobby = lobbies[lobbyCode];
         if (!lobby) return;
 
@@ -299,22 +416,22 @@ io.on("connection", socket => {
             clearTimeout(lobby.finalVoteTimer);
             endFinalVote(lobbyCode);
         }
-    });
+    }));
 
-    socket.on("cursorMove", ({ lobbyCode, x, y }) => {
+    socket.on("cursorMove", withValidation(socket, schemas.cursorMove, ({ lobbyCode, x, y }) => {
         socket.to(lobbyCode).emit("cursorMove", {
             user: socket.data.user,
             avatar: socket.data.avatar,
             x,
             y,
         });
-    });
+    }));
 
-    socket.on("cursorLeave", ({ lobbyCode }) => {
+    socket.on("cursorLeave", withValidation(socket, schemas.cursorLeave, ({ lobbyCode }) => {
         socket.to(lobbyCode).emit("cursorLeave", { user: socket.data.user });
-    });
+    }));
 
-    socket.on("getPlaceDetails", async ({ placeId }) => {
+    socket.on("getPlaceDetails", withValidation(socket, schemas.getPlaceDetails, async ({ placeId }) => {
         try {
             const fields = 'name,rating,user_ratings_total,formatted_address,formatted_phone_number,website,opening_hours,price_level,url,photos';
             const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${process.env.SECRET_KEY}`;
@@ -324,9 +441,10 @@ io.on("connection", socket => {
             console.error('Error fetching place details:', error);
             socket.emit('Error', 'Error fetching place details');
         }
-    });
+    }));
 
     socket.on("disconnect", () => {
+        clearRateLimits(socket);
         for (const [code, lobby] of Object.entries(lobbies)) {
             if (lobby.users.some(u => u.name === socket.data.user)) {
 
@@ -492,7 +610,7 @@ function getMostVotedOptions(lobby) {
 }
 
 async function searchPlaces(selectedOptions, coords) {
-    const ambiance = selectedOptions[1];
+    const price    = selectedOptions[1];
     const cuisine  = selectedOptions[2];
     const distance = selectedOptions[3];
 
@@ -503,12 +621,23 @@ async function searchPlaces(selectedOptions, coords) {
         "Long drive (15+ miles)":       50000,
     };
 
+    const priceToLevel = {
+        "$":    1,
+        "$$":   2,
+        "$$$":  3,
+        "$$$$": 4,
+    };
+
     const radius = distanceToRadius[distance] || 8047;
-    const query  = `${cuisine} ${ambiance} restaurant`;
+    const priceLevel = priceToLevel[price];
+    const query = `${cuisine} restaurant`;
 
-    console.log(`Searching: "${query}" within ${radius}m of ${coords}`);
+    console.log(`Searching: "${query}" within ${radius}m of ${coords}, price level ${priceLevel}`);
 
-    const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${coords}&radius=${radius}&type=restaurant&key=${process.env.SECRET_KEY}`;
+    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${coords}&radius=${radius}&type=restaurant&key=${process.env.SECRET_KEY}`;
+    if (priceLevel) {
+        url += `&minprice=${priceLevel}&maxprice=${priceLevel}`;
+    }
 
     try {
         const response = await axios.get(url);

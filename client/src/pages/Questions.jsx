@@ -5,6 +5,8 @@ import { Button, Card } from "flowbite-react";
 import { useSocket } from "@/SocketContext";
 import { Progress } from "@/components/ui/progress";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { useToast } from "@/hooks/use-toast";
+import { useLeaveGuard } from "@/hooks/useLeaveGuard";
 
 function CircularTimer({ timeLeft, duration }) {
     const size = 88;
@@ -55,6 +57,9 @@ export const Questions = () => {
     const { socket } = useSocket();
     const { code } = useParams();
     const navigate = useNavigate();
+    const { toast } = useToast();
+
+    useLeaveGuard({ socket, code });
 
     const [users, setUsers] = useState([]);
     const [poll, setPoll] = useState(null);
@@ -85,7 +90,15 @@ export const Questions = () => {
         const handleNavResults = () => navigate(`/Results/${code}`);
 
         const handleUserDisconnect = (discPlayer) => {
-            setUsers(prev => prev.filter(u => u !== discPlayer));
+            setUsers(prev => prev.filter(u => u.name !== discPlayer));
+        };
+
+        const handleHostTransferred = ({ newHost }) => {
+            toast({
+                title: "New host",
+                description: `${newHost} is now the host.`,
+                duration: 2500,
+            });
         };
 
         const handlePhaseStart = ({ questionIndex, duration: dur, startedAt, lockedPlayers: lp }) => {
@@ -124,6 +137,7 @@ export const Questions = () => {
         socket.on('userDisconnect', handleUserDisconnect);
         socket.on('phase_start', handlePhaseStart);
         socket.on('phase_extend', handlePhaseExtend);
+        socket.on('hostTransferred', handleHostTransferred);
         socket.on('Error', handleError);
 
         return () => {
@@ -133,10 +147,11 @@ export const Questions = () => {
             socket.off('userDisconnect', handleUserDisconnect);
             socket.off('phase_start', handlePhaseStart);
             socket.off('phase_extend', handlePhaseExtend);
+            socket.off('hostTransferred', handleHostTransferred);
             socket.off('Error', handleError);
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [socket, code, navigate]);
+    }, [socket, code, navigate, toast]);
 
     // Total votes on current question
     const totalVotes = useMemo(() => {
@@ -150,7 +165,7 @@ export const Questions = () => {
     };
 
     return (
-        <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
+        <Layout user={socket?.auth?.token} avatar={socket?.auth?.avatar}>
             <div className={"w-full lg:w-[80%] rounded-2xl mx-auto p-4 pt-6 mb-6"}>
                 <Field className="w-full">
                     <FieldLabel htmlFor="progress-poll" className="text-[#2d6a2d]">
@@ -205,7 +220,7 @@ export const Questions = () => {
                                         {/* Vote button — only for locked-in players */}
                                         {isLocked && (
                                             <div className={"absolute bottom-5 right-5"}>
-                                                {!option.votes.includes(socket.auth.token) ? (
+                                                {!option.votes.includes(socket?.auth?.token) ? (
                                                     <Button
                                                         className={"bg-[#2d6a2d] hover:bg-[#266226] text-white md:p-2"}
                                                         onClick={() => handleVote(option.id)}

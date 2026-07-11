@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronRight, User, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSocket } from "@/SocketContext"
@@ -33,6 +33,13 @@ export const Create = () => {
     const navigate = useNavigate();
     const { socket } = useSocket();
 
+
+    useEffect(() => {
+        if (!socket) return;
+        const handleLobbyCreated = (code) => navigate(`/Lobby/${code}`);
+        socket.on('lobbyCreated', handleLobbyCreated);
+        return () => socket.off('lobbyCreated', handleLobbyCreated);
+    }, [socket, navigate]);
 
     const avatarSelect = (avatar) => {
         setSelectedAvatar(avatar);
@@ -71,10 +78,6 @@ export const Create = () => {
             socket.connect();
 
             socket.emit("createLobby", {coords});
-
-            socket.on('lobbyCreated', (code) => {
-                navigate(`/Lobby/${code}`);
-            });
         } else {
             console.error('Socket not initialized...')
         }

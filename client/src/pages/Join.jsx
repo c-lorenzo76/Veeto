@@ -67,20 +67,6 @@ export const Join = () => {
         }
     }
 
-    // const handleJoin = () => {
-    //     console.log("name: ", name);
-    //     console.log("lobby-code: ", pin);
-
-    //     if (name && pin) {
-    //         connectSocket(name, selectedAvatar);
-    //         socket.emit("joinLobby", { lobbyCode: pin });
-
-    //         socket.on('lobbyJoined', () => {
-    //             navigate(`/Lobby/${pin}`);
-    //         });
-    //     }
-    // };
-
     return (
         <div className="flex flex-col justify-center min-h-screen items-center bg-gray-100">
             <motion.div

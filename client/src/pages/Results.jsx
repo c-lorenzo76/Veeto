@@ -9,6 +9,8 @@ import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useToast } from "@/hooks/use-toast";
+import { useLeaveGuard } from "@/hooks/useLeaveGuard";
 
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -76,6 +78,9 @@ export const Results = () => {
     const { socket } = useSocket();
     const { code } = useParams();
     const navigate = useNavigate();
+    const { toast } = useToast();
+
+    useLeaveGuard({ socket, code });
 
     const [places, setPlaces] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -112,9 +117,9 @@ export const Results = () => {
         iconAnchor: [40, 8],
     });
 
-    if (!socket) return;
-
     useEffect(() => {
+        if (!socket) return;
+
         const handleGetPlaces = ({ places, coords, lockedPlayers: lp }) => {
             setPlaces(places);
             setLoading(false);
@@ -129,15 +134,6 @@ export const Results = () => {
                 loadingDetailRef.current = first.place_id;
                 setLoadingDetailId(first.place_id);
                 socket.emit('getPlaceDetails', { placeId: first.place_id });
-            }
-        };
-
-        const handlePlaceDetails = (details) => {
-            const id = loadingDetailRef.current;
-            if (id) {
-                setPlaceDetailsMap(prev => ({ ...prev, [id]: details }));
-                setLoadingDetailId(null);
-                loadingDetailRef.current = null;
             }
         };
 
@@ -211,8 +207,17 @@ export const Results = () => {
             });
         };
 
+        const handleHostTransferred = ({ newHost }) => {
+            toast({
+                title: "New host",
+                description: `${newHost} is now the host.`,
+                duration: 2500,
+            });
+        };
+
         socket.on('winner', handleWinner);
         socket.on('hostLeft', handleHostLeft);
+        socket.on('hostTransferred', handleHostTransferred);
         socket.on('cursorMove', handleRemoteCursorMove);
         socket.on('cursorLeave', handleRemoteCursorLeave);
 
@@ -224,11 +229,12 @@ export const Results = () => {
             socket.off('restaurantVoteCount', handleVoteCount);
             socket.off('winner', handleWinner);
             socket.off('hostLeft', handleHostLeft);
+            socket.off('hostTransferred', handleHostTransferred);
             socket.off('cursorMove', handleRemoteCursorMove);
             socket.off('cursorLeave', handleRemoteCursorLeave);
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [code, socket]);
+    }, [code, socket, toast]);
 
     const handleSelectPlace = (place) => {
         if (selectedPlaceId === place.place_id) {
@@ -273,7 +279,7 @@ export const Results = () => {
     if (phase === 'winner' && winnerPlace) {
         const details = winnerDetails || placeDetailsMap[winnerPlace.place_id];
         return (
-            <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
+            <Layout user={socket?.auth?.token} avatar={socket?.auth?.avatar}>
                 <div className="bg-[#e8f0e8] px-6 pt-6 flex flex-col items-center justify-center">
                     <div className="flex items-center gap-3 mb-6">
                         <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />

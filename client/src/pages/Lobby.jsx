@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"
+import { useLeaveGuard } from "@/hooks/useLeaveGuard";
 
 export const Lobby = () => {
     const { socket } = useSocket();
@@ -16,6 +17,8 @@ export const Lobby = () => {
     const [users, setUsers] = useState([]);
     const [lobbyCode, setLobbyCode] = useState('');
     const [isHost, setIsHost] = useState(false);
+
+    useLeaveGuard({ socket, code, isHost });
 
 
     useEffect(() => {
@@ -52,6 +55,14 @@ export const Lobby = () => {
             navigate('/', { state: { hostLeft: true } });
         });
 
+        socket.on("hostTransferred", ({ newHost }) => {
+            toast({
+                title: "New host",
+                description: `${newHost} is now the host.`,
+                duration: 2500,
+            });
+        });
+
         return () => {
             socket.off("lobbyInfo");
             socket.off("selfInfo");
@@ -59,6 +70,7 @@ export const Lobby = () => {
             socket.off("userDisconnect");
             socket.off("kicked");
             socket.off("hostLeft");
+            socket.off("hostTransferred");
         };
     }, [code, socket]);
 
@@ -230,7 +242,7 @@ export const Lobby = () => {
                                     layout
                                 >
                                     <div className="relative flex items-center space-x-4 bg-white/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow group">
-                                        {isHost && displayName !== socket.auth.token && (
+                                        {isHost && displayName !== socket?.auth?.token && (
                                             <button
                                                 onClick={() => handleKick(displayName)}
                                                 className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
