@@ -8,8 +8,8 @@ export const SocketProvider = ({ children }) => {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        const newSocket = io('http://localhost:8000', {
-            autoConnect: false, 
+        const newSocket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000', {
+            autoConnect: false,
         });
 
         newSocket.on('connect', () => setIsConnected(true));
