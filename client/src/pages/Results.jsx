@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketContext";
 import { Layout } from "./Layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Clock, Phone, Globe, ExternalLink, ChevronDown, ChevronUp, Timer, Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Clock, Phone, Globe, ExternalLink, ChevronDown, ChevronUp, Timer, Trophy, LogOut } from "lucide-react";
 import { FollowerPointerCard } from "@/components/ui/following-pointer";
 import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -275,6 +276,11 @@ export const Results = () => {
         socket.emit('voteRestaurant', { lobbyCode: code, placeId });
     };
 
+    const handleExit = () => {
+        socket?.disconnect();
+        navigate('/');
+    };
+
     const mapCenter = places.length > 0 && places[0].geometry?.location
         ? [places[0].geometry.location.lat, places[0].geometry.location.lng]
         : [35.85, -79.56];
@@ -357,6 +363,14 @@ export const Results = () => {
                             )}
                         </div>
                     </div>
+
+                    <Button
+                        onClick={handleExit}
+                        className="mt-6 mb-6 bg-[#1a2e1a] hover:bg-[#2d6a2d] text-white"
+                    >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Exit
+                    </Button>
                 </div>
             </Layout>
         );
