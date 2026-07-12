@@ -14,14 +14,16 @@ import { Toaster } from "@/components/ui/toaster";
 const App = () => {
     return (
         <BrowserRouter>
-            <Routes>
-                <Route index element={<Home/>}/>
-                <Route path={"Create"} element={<SocketProvider><Create/></SocketProvider>}/>
-                <Route path={"Join"} element={<SocketProvider><Join/></SocketProvider>}/>
-                <Route path={"Lobby/:code"} element={<SocketProvider><Lobby/></SocketProvider>}/>
-                <Route path={"Questions/:code"} element={<SocketProvider><Questions/></SocketProvider>}/>
-                <Route path={"Results/:code"} element={<SocketProvider><Results/></SocketProvider>}/>
-            </Routes>
+            <SocketProvider>
+                <Routes>
+                    <Route index element={<Home/>}/>
+                    <Route path={"Create"} element={<Create/>}/>
+                    <Route path={"Join"} element={<Join/>}/>
+                    <Route path={"Lobby/:code"} element={<Lobby/>}/>
+                    <Route path={"Questions/:code"} element={<Questions/>}/>
+                    <Route path={"Results/:code"} element={<Results/>}/>
+                </Routes>
+            </SocketProvider>
             <Toaster />
         </BrowserRouter>
     )
