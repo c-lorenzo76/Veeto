@@ -146,8 +146,10 @@ export const Results = () => {
 
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
+            // Clamp elapsed in both directions to guard against clock skew
+            // between client and server.
             const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-            const initial = Math.max(0, duration - elapsed);
+            const initial = duration - Math.max(0, Math.min(duration, elapsed));
             setTimeLeft(initial);
 
             timerIntervalRef.current = setInterval(() => {

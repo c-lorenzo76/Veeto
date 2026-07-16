@@ -109,9 +109,10 @@ export const Questions = () => {
             // Clear any running timer
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-            // Compute remaining time based on server's startedAt
+            // Compute remaining time based on server's startedAt, clamped in both
+            // directions to guard against clock skew between client and server.
             const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-            const initial = Math.max(0, dur - elapsed);
+            const initial = dur - Math.max(0, Math.min(dur, elapsed));
             setTimeLeft(initial);
 
             timerIntervalRef.current = setInterval(() => {
