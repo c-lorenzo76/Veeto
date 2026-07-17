@@ -101,7 +101,9 @@ export const Results = () => {
     const { toast } = useToast();
     const t = useStrings();
 
-    useLeaveGuard({ socket, code });
+    const [isHost, setIsHost] = useState(false);
+
+    useLeaveGuard({ socket, code, isHost });
 
     const [places, setPlaces] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -142,6 +144,12 @@ export const Results = () => {
 
     useEffect(() => {
         if (!socket) return;
+
+        socket.emit('updateLobby', { lobbyCode: code });
+
+        const handleSelfInfo = ({ isHost: hostStatus }) => {
+            setIsHost(hostStatus);
+        };
 
         const handleGetPlaces = ({ places, coords, lockedPlayers: lp, radiusUsed: radius, searchBroadened: broadened }) => {
             setPlaces(places);
@@ -215,6 +223,7 @@ export const Results = () => {
             }
         };
 
+        socket.on('selfInfo', handleSelfInfo);
         socket.on('getPlaces', handleGetPlaces);
         socket.on('placeDetails', handlePlaceDetailsWithWinner);
         socket.on('phase_start', handlePhaseStart);
@@ -252,6 +261,7 @@ export const Results = () => {
         socket.on('cursorLeave', handleRemoteCursorLeave);
 
         return () => {
+            socket.off('selfInfo', handleSelfInfo);
             socket.off('getPlaces', handleGetPlaces);
             socket.off('placeDetails', handlePlaceDetailsWithWinner);
             socket.off('phase_start', handlePhaseStart);
@@ -303,6 +313,17 @@ export const Results = () => {
     const handleExit = () => {
         socket?.disconnect();
         navigate('/');
+    };
+
+    const handleExitVoting = () => {
+        const message = isHost ? t.results.exitVotingHostMessage : t.results.exitVotingPlayerMessage;
+        const confirmed = window.confirm(message);
+        if (!confirmed) return;
+
+        if (isHost && socket && code) {
+            socket.emit('transferHost', { lobbyCode: code });
+        }
+        handleExit();
     };
 
     const mapCenter = places.length > 0 && places[0].geometry?.location
@@ -406,7 +427,7 @@ export const Results = () => {
             <div className="bg-[#e8f0e8] px-6 pt-4 min-h-screen flex flex-col">
 
                 {/* Timer + vote count bar */}
-                <div className="flex w-[90%] lg:w-[80%] mx-auto items-center justify-between py-3">
+                <div className="flex flex-wrap gap-2 w-[90%] lg:w-[80%] mx-auto items-center justify-between py-3">
                     <div className="flex items-center gap-2">
                         <Timer className={`w-5 h-5 ${timerColor}`} />
                         <span className={`text-xl font-bold tabular-nums ${timerColor}`}>{timeLeft}s</span>
@@ -414,9 +435,18 @@ export const Results = () => {
                     <div className="text-sm font-semibold text-[#1a2e1a] bg-white px-4 py-1.5 rounded-full shadow-sm">
                         {voteCount.voted} / {voteCount.total || lockedPlayers.length} {t.results.votedSuffix}
                     </div>
-                    {!isLocked && (
-                        <span className="text-sm text-[#5a7a5a] italic">{t.results.watching}</span>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {!isLocked && (
+                            <span className="text-sm text-[#5a7a5a] italic">{t.results.watching}</span>
+                        )}
+                        <Button
+                            onClick={handleExitVoting}
+                            className="bg-[#1a2e1a] hover:bg-[#2d6a2d] text-white"
+                        >
+                            <LogOut className="w-4 h-4 mr-2" />
+                            {t.results.exit}
+                        </Button>
+                    </div>
                 </div>
 
                 {searchBroadened && (
@@ -467,17 +497,23 @@ export const Results = () => {
                                 ))}
                             </div>
                         ) : (
-                            <div className="divide-y">
-                                {places.map((place) => {
+                            <div className="p-3 space-y-3">
+                                {places.map((place, index) => {
                                     const isExpanded = selectedPlaceId === place.place_id;
                                     const details = placeDetailsMap[place.place_id];
                                     const isLoadingDetails = loadingDetailId === place.place_id;
                                     const hasVotedThis = myVote === place.place_id;
 
                                     return (
-                                        <div key={place.place_id}>
+                                        <motion.div
+                                            key={place.place_id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.04 }}
+                                            className={`rounded-xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden ${hasVotedThis ? 'border-[#2d6a2d] bg-[#e8f0e8]' : 'border-[#c8dcc8] bg-white'}`}
+                                        >
                                             <div
-                                                className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-[#e8f0e8] transition-colors ${hasVotedThis ? 'bg-[#e8f0e8]' : ''}`}
+                                                className="flex items-center gap-3 p-4 cursor-pointer hover:bg-[#e8f0e8] transition-colors"
                                                 onClick={() => handleSelectPlace(place)}
                                             >
                                                 <span className="font-medium flex-1 truncate">{place.name}</span>
@@ -491,7 +527,12 @@ export const Results = () => {
                                             </div>
 
                                             {isExpanded && (
-                                                <div className="px-5 pb-5 bg-white space-y-3">
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.25, ease: "easeOut" }}
+                                                    className="px-5 pb-5 bg-white space-y-3 border-t border-[#c8dcc8] pt-3"
+                                                >
                                                     {isLoadingDetails ? (
                                                         <div className="space-y-2 pt-2">
                                                             <Skeleton className="w-full h-36 rounded-lg" />
@@ -562,7 +603,9 @@ export const Results = () => {
 
                                                             {/* Vote button — locked players only, one vote */}
                                                             {isLocked && (
-                                                                <button
+                                                                <motion.button
+                                                                    whileHover={!myVote ? { scale: 1.03 } : {}}
+                                                                    whileTap={!myVote ? { scale: 0.97 } : {}}
                                                                     onClick={() => handleVoteRestaurant(place.place_id)}
                                                                     disabled={!!myVote}
                                                                     className={`mt-2 w-full py-2 rounded-lg text-sm font-semibold transition-colors ${
@@ -574,13 +617,13 @@ export const Results = () => {
                                                                     }`}
                                                                 >
                                                                     {hasVotedThis ? t.results.yourVote : myVote ? t.results.alreadyVoted : t.results.voteForThis}
-                                                                </button>
+                                                                </motion.button>
                                                             )}
                                                         </>
                                                     )}
-                                                </div>
+                                                </motion.div>
                                             )}
-                                        </div>
+                                        </motion.div>
                                     );
                                 })}
                             </div>
