@@ -106,6 +106,9 @@ export const strings = {
             alreadyVoted: "Already voted",
             voteForThis: "Vote for this",
             votedCheck: "✓ Voted",
+            tieBreakTitle: "It's a tie!",
+            tieBreakSubtitle: "Spinning to break the tie...",
+            tieBreakWinnerLabel: "The choice is clear:",
         },
         leaveGuard: {
             playerLeaveMessage: "Leave the game? You'll be removed and the others will continue without you.",
@@ -211,6 +214,9 @@ export const strings = {
             alreadyVoted: "Ya votaste",
             voteForThis: "Votar por este",
             votedCheck: "✓ Votado",
+            tieBreakTitle: "¡Es un empate!",
+            tieBreakSubtitle: "Girando para desempatar...",
+            tieBreakWinnerLabel: "La elección está clara:",
         },
         leaveGuard: {
             playerLeaveMessage: "¿Salir del juego? Serás eliminado y los demás continuarán sin ti.",
@@ -316,6 +322,9 @@ export const strings = {
             alreadyVoted: "Déjà voté",
             voteForThis: "Voter pour celui-ci",
             votedCheck: "✓ Voté",
+            tieBreakTitle: "C'est une égalité !",
+            tieBreakSubtitle: "Tirage au sort en cours...",
+            tieBreakWinnerLabel: "Le choix est clair :",
         },
         leaveGuard: {
             playerLeaveMessage: "Quitter la partie ? Vous serez retiré et les autres continueront sans vous.",
@@ -421,6 +430,9 @@ export const strings = {
             alreadyVoted: "Già votato",
             voteForThis: "Vota per questo",
             votedCheck: "✓ Votato",
+            tieBreakTitle: "È un pareggio!",
+            tieBreakSubtitle: "Sorteggio in corso...",
+            tieBreakWinnerLabel: "La scelta è chiara:",
         },
         leaveGuard: {
             playerLeaveMessage: "Uscire dalla partita? Verrai rimosso e gli altri continueranno senza di te.",
@@ -526,6 +538,9 @@ export const strings = {
             alreadyVoted: "Já votou",
             voteForThis: "Votar neste",
             votedCheck: "✓ Votado",
+            tieBreakTitle: "Empate!",
+            tieBreakSubtitle: "Sorteando para desempatar...",
+            tieBreakWinnerLabel: "A escolha é clara:",
         },
         leaveGuard: {
             playerLeaveMessage: "Sair do jogo? Você será removido e os outros continuarão sem você.",
@@ -631,6 +646,9 @@ export const strings = {
             alreadyVoted: "Уже проголосовали",
             voteForThis: "Голосовать за это",
             votedCheck: "✓ Голос учтён",
+            tieBreakTitle: "Ничья!",
+            tieBreakSubtitle: "Определяем победителя...",
+            tieBreakWinnerLabel: "Выбор очевиден:",
         },
         leaveGuard: {
             playerLeaveMessage: "Покинуть игру? Вы будете удалены, а остальные продолжат без вас.",

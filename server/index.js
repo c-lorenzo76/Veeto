@@ -585,7 +585,11 @@ function endFinalVote(code) {
 
     lobby.phase = 'done';
 
-    io.to(code).emit('winner', { place: winnerPlace });
+    const tiedPlaces = tied.length > 1
+        ? tied.map(id => lobby.places?.find(p => p.place_id === id)).filter(Boolean)
+        : null;
+
+    io.to(code).emit('winner', { place: winnerPlace, tiedPlaces });
     console.log(`Winner in lobby ${code}: ${winnerPlace?.name}`);
 }
 

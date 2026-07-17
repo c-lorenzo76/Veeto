@@ -283,3 +283,50 @@ describe('advanceQuestion logic', () => {
     expect(allVoted).toBe(false);
   });
 });
+
+// ── Test: endFinalVote tiedPlaces payload ──────────────────────
+// Mirrors the tally + tiedPlaces logic in endFinalVote (server/index.js)
+// since the function itself isn't exported.
+
+describe('endFinalVote tiedPlaces logic', () => {
+  const places = [
+    { place_id: 'p1', name: 'Restaurant A' },
+    { place_id: 'p2', name: 'Restaurant B' },
+    { place_id: 'p3', name: 'Restaurant C' },
+  ];
+
+  function computeTiedPlaces(votes, allPlaces) {
+    const tally = {};
+    for (const placeId of Object.values(votes)) {
+      tally[placeId] = (tally[placeId] || 0) + 1;
+    }
+    const maxVotes = Math.max(...Object.values(tally));
+    const tied = Object.keys(tally).filter(id => tally[id] === maxVotes);
+    return tied.length > 1
+      ? tied.map(id => allPlaces.find(p => p.place_id === id)).filter(Boolean)
+      : null;
+  }
+
+  it('includes tiedPlaces when there is a tie for the most votes', () => {
+    const votes = { Alice: 'p1', Bob: 'p2' };
+    const tiedPlaces = computeTiedPlaces(votes, places);
+
+    expect(tiedPlaces).not.toBeNull();
+    expect(tiedPlaces.map(p => p.place_id).sort()).toEqual(['p1', 'p2']);
+  });
+
+  it('includes all tied places when there is a 3-way tie', () => {
+    const votes = { Alice: 'p1', Bob: 'p2', Charlie: 'p3' };
+    const tiedPlaces = computeTiedPlaces(votes, places);
+
+    expect(tiedPlaces).not.toBeNull();
+    expect(tiedPlaces.map(p => p.place_id).sort()).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('is null when there is a clear single winner', () => {
+    const votes = { Alice: 'p1', Bob: 'p1', Charlie: 'p2' };
+    const tiedPlaces = computeTiedPlaces(votes, places);
+
+    expect(tiedPlaces).toBeNull();
+  });
+});

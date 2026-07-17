@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketContext";
 import { Layout } from "./Layout";
@@ -55,7 +55,118 @@ function MapController({ selectedPlaceId, places }) {
             map.flyTo([places[0].geometry.location.lat, places[0].geometry.location.lng], 12, { duration: 0.8 });
         }
     }, [selectedPlaceId]);
+
+    // The map's container is now bounded by Results' own layout instead of
+    // growing with content, so make sure Leaflet re-measures it on mount and
+    // whenever the window resizes (it doesn't auto-detect container resizes).
+    useEffect(() => {
+        map.invalidateSize();
+        const handleResize = () => map.invalidateSize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [map]);
+
     return null;
+}
+
+// Carousel geometry: card width + gap must match the Tailwind classes used
+// on each card below (w-40 = 160px, gap-4 = 16px) so the computed slide
+// offset actually centers the winning card under the pointer.
+const TIEBREAK_CARD_WIDTH = 160;
+const TIEBREAK_CARD_GAP = 16;
+const TIEBREAK_REPEAT_COUNT = 12;
+
+function TiebreakSpinner({ tiebreakInfo, onComplete, t }) {
+    const { tied, winner } = tiebreakInfo;
+    const [offset, setOffset] = useState(0);
+    const [settled, setSettled] = useState(false);
+
+    const winnerIndexInSet = Math.max(0, tied.findIndex(p => p.place_id === winner?.place_id));
+    const paddingSets = Math.floor(TIEBREAK_REPEAT_COUNT / 2);
+    const landingIndex = paddingSets * tied.length + winnerIndexInSet;
+    const track = Array.from({ length: TIEBREAK_REPEAT_COUNT }, () => tied).flat();
+
+    useEffect(() => {
+        // +half a card width so the landing card's center — not its left
+        // edge — ends up under the pointer, since the track's 50% left
+        // padding places card index 0's left edge at viewport center.
+        const targetOffset = landingIndex * (TIEBREAK_CARD_WIDTH + TIEBREAK_CARD_GAP) + TIEBREAK_CARD_WIDTH / 2;
+        // Kick off the slide on the next frame so the track first paints at
+        // its resting position before animating — otherwise Framer Motion
+        // has nothing to transition from.
+        const raf = requestAnimationFrame(() => setOffset(targetOffset));
+        const settleTimeout = setTimeout(() => setSettled(true), 2600);
+        const completeTimeout = setTimeout(onComplete, 3300);
+        return () => {
+            cancelAnimationFrame(raf);
+            clearTimeout(settleTimeout);
+            clearTimeout(completeTimeout);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    return (
+        <div className="bg-[#e8f0e8] px-6 pt-6 flex flex-col items-center justify-center">
+            <h1 className="text-3xl font-bold text-[#1a2e1a] mb-2">{t.results.tieBreakTitle}</h1>
+            <p className="text-[#5a7a5a] mb-8">{t.results.tieBreakSubtitle}</p>
+
+            <div className="relative w-full max-w-2xl">
+                <ChevronDown className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 w-5 h-5 text-[#2d6a2d]" />
+                <ChevronUp className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-20 w-5 h-5 text-[#2d6a2d]" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-1 -translate-x-1/2 bg-[#2d6a2d]/40 z-10 rounded-full" />
+
+                <div
+                    className="relative overflow-hidden py-4 h-32 flex items-center"
+                    style={{
+                        maskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
+                        WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)',
+                    }}
+                >
+                    <motion.div
+                        className="flex items-center"
+                        style={{ gap: TIEBREAK_CARD_GAP, paddingLeft: '50%' }}
+                        animate={{ x: -offset }}
+                        transition={{ duration: 2.5, ease: [0.15, 0, 0.15, 1] }}
+                    >
+                        {track.map((place, index) => {
+                            const isWinnerCard = settled && index === landingIndex;
+                            return (
+                                <div
+                                    key={`${place.place_id}-${index}`}
+                                    className={`flex-shrink-0 bg-white rounded-2xl border overflow-hidden flex flex-col items-center justify-center transition-all duration-500 ${
+                                        isWinnerCard ? 'border-[#2d6a2d] scale-110 shadow-lg' : 'border-[#c8dcc8] shadow-sm'
+                                    }`}
+                                    style={{ width: TIEBREAK_CARD_WIDTH, height: 112 }}
+                                >
+                                    {place.photos?.[0]?.photo_reference ? (
+                                        <img
+                                            src={`${API_BASE_URL}/api/place-photo?ref=${place.photos[0].photo_reference}`}
+                                            alt={place.name}
+                                            className="w-full h-14 object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-14 bg-[#c8dcc8]" />
+                                    )}
+                                    <span className="text-xs font-semibold text-[#1a2e1a] line-clamp-1 px-2 pt-1 w-full text-center">
+                                        {place.name}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </motion.div>
+                </div>
+            </div>
+
+            <div
+                className={`mt-8 text-center transition-all duration-500 ${
+                    settled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+            >
+                <p className="text-[#5a7a5a] font-medium mb-1">{t.results.tieBreakWinnerLabel}</p>
+                <h2 className="text-2xl font-bold text-[#1a2e1a] uppercase tracking-wide">{winner?.name}</h2>
+            </div>
+        </div>
+    );
 }
 
 
@@ -117,11 +228,15 @@ export const Results = () => {
     const [myVote, setMyVote] = useState(null);
     const [voteCount, setVoteCount] = useState({ voted: 0, total: 0 });
     const [timeLeft, setTimeLeft] = useState(90);
-    const [phase, setPhase] = useState('voting'); // 'voting' | 'winner'
+    const [phase, setPhase] = useState('voting'); // 'voting' | 'tiebreak' | 'winner'
     const [winnerPlace, setWinnerPlace] = useState(null);
     const [winnerDetails, setWinnerDetails] = useState(null);
     const [searchBroadened, setSearchBroadened] = useState(false);
     const [radiusUsed, setRadiusUsed] = useState(null);
+    const [tiebreakInfo, setTiebreakInfo] = useState(null); // { tied: [...places], winner: place }
+
+    const resultsContainerRef = useRef(null);
+    const [containerHeight, setContainerHeight] = useState('calc(100dvh - 200px)');
 
     const [remoteCursors, setRemoteCursors] = useState({}); // { username: { x, y, avatar } }
 
@@ -201,8 +316,7 @@ export const Results = () => {
             setVoteCount({ voted, total });
         };
 
-        const handleWinner = ({ place }) => {
-            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        const resolveWinner = (place) => {
             setWinnerPlace(place);
             setPhase('winner');
             // Fetch full details for winner
@@ -210,6 +324,16 @@ export const Results = () => {
                 socket.emit('getPlaceDetails', { placeId: place.place_id });
                 loadingDetailRef.current = place.place_id;
             }
+        };
+
+        const handleWinner = ({ place, tiedPlaces }) => {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (tiedPlaces?.length > 1) {
+                setTiebreakInfo({ tied: tiedPlaces, winner: place });
+                setPhase('tiebreak');
+                return;
+            }
+            resolveWinner(place);
         };
 
         // Override placeDetails to also capture winner details
@@ -276,6 +400,34 @@ export const Results = () => {
         };
     }, [code, socket, toast, t]);
 
+    // Bound the list/map layout's height to the viewport so the list column
+    // can scroll internally instead of the whole page growing with content.
+    // Layout.jsx stays unbounded (it's shared with other pages), so we measure
+    // this container's own position and reserve space for the Footer below it.
+    useLayoutEffect(() => {
+        const computeHeight = () => {
+            if (!resultsContainerRef.current) return;
+            const top = resultsContainerRef.current.getBoundingClientRect().top;
+            const BOTTOM_RESERVE = 90; // Footer + Layout's bottom padding/gaps below this container
+            const available = window.innerHeight - top - BOTTOM_RESERVE;
+            setContainerHeight(`${Math.max(400, available)}px`);
+        };
+        computeHeight();
+        window.addEventListener('resize', computeHeight);
+        return () => window.removeEventListener('resize', computeHeight);
+    }, [phase]);
+
+    const handleTiebreakComplete = () => {
+        const winner = tiebreakInfo?.winner;
+        if (!winner) return;
+        setWinnerPlace(winner);
+        setPhase('winner');
+        if (winner.place_id) {
+            socket.emit('getPlaceDetails', { placeId: winner.place_id });
+            loadingDetailRef.current = winner.place_id;
+        }
+    };
+
     const handleSelectPlace = (place) => {
         if (selectedPlaceId === place.place_id) {
             setSelectedPlaceId(null);
@@ -331,6 +483,14 @@ export const Results = () => {
         : [35.85, -79.56];
 
     const timerColor = timeLeft <= 10 ? 'text-red-500' : timeLeft <= 20 ? 'text-yellow-500' : 'text-[#1a2e1a]';
+
+    if (phase === 'tiebreak' && tiebreakInfo) {
+        return (
+            <Layout user={socket?.auth?.token} avatar={socket?.auth?.avatar}>
+                <TiebreakSpinner tiebreakInfo={tiebreakInfo} onComplete={handleTiebreakComplete} t={t} />
+            </Layout>
+        );
+    }
 
     if (phase === 'winner' && winnerPlace) {
         const details = winnerDetails || placeDetailsMap[winnerPlace.place_id];
@@ -423,8 +583,12 @@ export const Results = () => {
 
     // ── Voting screen ─────────────────────────────────────────
     return (
-        <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
-            <div className="bg-[#e8f0e8] px-6 pt-4 min-h-screen flex flex-col">
+        <Layout user={socket?.auth?.token} avatar={socket?.auth?.avatar}>
+            <div
+                ref={resultsContainerRef}
+                className="bg-[#e8f0e8] px-6 pt-4 flex flex-col"
+                style={{ height: containerHeight }}
+            >
 
                 {/* Timer + vote count bar */}
                 <div className="flex flex-wrap gap-2 w-[90%] lg:w-[80%] mx-auto items-center justify-between py-3">
