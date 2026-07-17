@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { motion } from "framer-motion";
 import { Layout } from "./Layout.jsx"
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, Card } from "flowbite-react";
@@ -185,7 +186,12 @@ export const Questions = () => {
                 </Field>
             </div>
 
-            <div className={"w-full lg:w-[80%] bg-[#f0f7f0] rounded-xl mx-auto p-8 shadow-sm"}>
+            <motion.div
+                className={"w-full lg:w-[80%] bg-[#f0f7f0] rounded-xl mx-auto p-8 shadow-sm"}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.99, ease: "easeOut" }}
+            >
                 {poll && (
                     <>
                         {/* Timer + question */}
@@ -272,7 +278,7 @@ export const Questions = () => {
                         </div>
                     </>
                 )}
-            </div>
+            </motion.div>
         </Layout>
     );
 };
