@@ -32,6 +32,7 @@ import { useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketContext";
 import { useEffect } from "react";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
+import { useStrings } from "@/context/LanguageContext";
 
 
 export const Join = () => {
@@ -40,6 +41,7 @@ export const Join = () => {
     const [pin, setPin] = useState('');
     const navigate = useNavigate();
     const { socket, connectSocket } = useSocket();
+    const t = useStrings();
 
 
     const avatarSelect = (avatar) => {
@@ -81,10 +83,10 @@ export const Join = () => {
                 <Card className="w-full max-w-sm bg-gray-50">
                     <CardHeader>
                         <CardTitle className="text-5xl flex justify-center">
-                            join
+                            {t.join.title}
                         </CardTitle>
                         <CardDescription className="text-center text-md">
-                            Enter your name below to be displayed to others and the pin provided by the host
+                            {t.join.description}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4">
@@ -116,10 +118,10 @@ export const Join = () => {
                                 <DialogContent className={"sm:max-w-[425px]"}>
                                     <DialogHeader>
                                         <DialogTitle>
-                                            Select avatar
+                                            {t.join.selectAvatarTitle}
                                         </DialogTitle>
                                         <DialogDescription>
-                                            Choose an avatar to be viewed by others
+                                            {t.join.selectAvatarDescription}
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogClose>
@@ -129,21 +131,21 @@ export const Join = () => {
                             </Dialog>
                         </div>
                         <CardDescription className={"text-center"}>
-                            Select an avatar if you&apos;d like...
+                            {t.join.avatarOptional}
                         </CardDescription>
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="name">{t.join.nameLabel}</Label>
                             <Input
                                 id="name"
                                 type="text"
-                                placeholder="Neo"
+                                placeholder={t.join.namePlaceholder}
                                 required
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="pin">Pin</Label>
+                            <Label htmlFor="pin">{t.join.pinLabel}</Label>
                             <div className="flex items-center justify-center mx-auto ">
                                 <InputOTP
                                     id="pin"
@@ -171,7 +173,7 @@ export const Join = () => {
                     <CardFooter>
                         <Button className="w-full" onClick={handleJoin}>
                             <Merge className={"mr-0.5"} />
-                            Join host
+                            {t.join.joinButton}
                         </Button>
                     </CardFooter>
                 </Card>

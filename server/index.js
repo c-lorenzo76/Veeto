@@ -160,48 +160,48 @@ io.on("connection", socket => {
             finalVoteTimer: null,
             places: [],
             poll: [
+                // Q1: Meal priority
                 {
                     id: 1,
-                    question: "What is your current top priority for your meal?",
                     options: [
-                        { id: 1, text: "Ambiance", votes: [] },
-                        { id: 2, text: "Budget", votes: [] },
-                        { id: 3, text: "Cuisine", votes: [] },
-                        { id: 4, text: "Distance", votes: [] },
+                        { id: 1, votes: [] }, // Ambiance
+                        { id: 2, votes: [] }, // Budget
+                        { id: 3, votes: [] }, // Cuisine
+                        { id: 4, votes: [] }, // Distance
                     ],
                 },
+                // Q2: Price range
                 {
                     id: 2,
-                    question: "What is your preferred price range?",
                     options: [
-                        { id: 1, text: "$", votes: [] },
-                        { id: 2, text: "$$", votes: [] },
-                        { id: 3, text: "$$$", votes: [] },
-                        { id: 4, text: "$$$$", votes: [] },
+                        { id: 1, votes: [] }, // $
+                        { id: 2, votes: [] }, // $$
+                        { id: 3, votes: [] }, // $$$
+                        { id: 4, votes: [] }, // $$$$
                     ],
                 },
+                // Q3: Cuisine
                 {
                     id: 3,
-                    question: "What type of cuisine are you in the mood for?",
                     options: [
-                        { id: 1, text: "Italian", votes: [] },
-                        { id: 2, text: "Mexican", votes: [] },
-                        { id: 3, text: "Chinese", votes: [] },
-                        { id: 4, text: "Japanese", votes: [] },
-                        { id: 5, text: "Mediterranean", votes: [] },
-                        { id: 6, text: "American", votes: [] },
-                        { id: 7, text: "French", votes: [] },
-                        { id: 8, text: "Thai", votes: [] },
+                        { id: 1, votes: [] }, // Italian
+                        { id: 2, votes: [] }, // Mexican
+                        { id: 3, votes: [] }, // Chinese
+                        { id: 4, votes: [] }, // Japanese
+                        { id: 5, votes: [] }, // Mediterranean
+                        { id: 6, votes: [] }, // American
+                        { id: 7, votes: [] }, // French
+                        { id: 8, votes: [] }, // Thai
                     ],
                 },
+                // Q4: Travel distance
                 {
                     id: 4,
-                    question: "How far are you willing to travel?",
                     options: [
-                        { id: 1, text: "Walking distance (0-1 miles)", votes: [] },
-                        { id: 2, text: "Short drive (1-5 miles)", votes: [] },
-                        { id: 3, text: "Moderate drive (5-15 miles)", votes: [] },
-                        { id: 4, text: "Long drive (15+ miles)", votes: [] },
+                        { id: 1, votes: [] }, // Walking distance (0-1 miles)
+                        { id: 2, votes: [] }, // Short drive (1-5 miles)
+                        { id: 3, votes: [] }, // Moderate drive (5-15 miles)
+                        { id: 4, votes: [] }, // Long drive (15+ miles)
                     ],
                 },
             ],
@@ -614,15 +614,28 @@ function getMostVotedOptions(lobby) {
     return lobby.poll.map((question) => {
         const maxVotes = Math.max(...question.options.map(o => o.votes.length));
         const tied = question.options.filter(o => o.votes.length === maxVotes);
-        return tied[Math.floor(Math.random() * tied.length)].text;
+        return tied[Math.floor(Math.random() * tied.length)].id;
     });
 }
 
+// Q4 (distance) option id -> search radius in meters
 const DISTANCE_TO_RADIUS = {
-    "Walking distance (0-1 miles)": 1610,
-    "Short drive (1-5 miles)":      8047,
-    "Moderate drive (5-15 miles)":  24145,
-    "Long drive (15+ miles)":       50000,
+    1: 1610,    // Walking distance
+    2: 8047,    // Short drive
+    3: 24145,   // Moderate drive
+    4: 50000,   // Long drive
+};
+
+// Q3 (cuisine) option id -> English search term used against the Places API
+const CUISINE_SEARCH_TERMS = {
+    1: 'Italian',
+    2: 'Mexican',
+    3: 'Chinese',
+    4: 'Japanese',
+    5: 'Mediterranean',
+    6: 'American',
+    7: 'French',
+    8: 'Thai',
 };
 
 // Ordered ladder of tiers used to escalate the search radius when results are sparse.
@@ -631,19 +644,21 @@ const RADIUS_LADDER = [1610, 8047, 24145, 50000];
 const MIN_ACCEPTABLE_RESULTS = 5;
 
 async function searchPlaces(selectedOptions, coords) {
-    const price    = selectedOptions[1];
-    const cuisine  = selectedOptions[2];
-    const distance = selectedOptions[3];
+    const priceId    = selectedOptions[1];
+    const cuisineId  = selectedOptions[2];
+    const distanceId = selectedOptions[3];
 
+    // Q2 (price) option id -> Google Places price level
     const priceToLevel = {
-        "$":    1,
-        "$$":   2,
-        "$$$":  3,
-        "$$$$": 4,
+        1: 1,  // $
+        2: 2,  // $$
+        3: 3,  // $$$
+        4: 4,  // $$$$
     };
 
-    const startingRadius = DISTANCE_TO_RADIUS[distance] || 8047;
-    const priceLevel = priceToLevel[price];
+    const cuisine = CUISINE_SEARCH_TERMS[cuisineId];
+    const startingRadius = DISTANCE_TO_RADIUS[distanceId] || 8047;
+    const priceLevel = priceToLevel[priceId];
     // Note: Google's Places API `keyword` param is documented for Nearby Search,
     // not Text Search — Text Search only formally supports `query` as its text
     // signal, so `keyword` would be silently ignored here. Instead we strengthen

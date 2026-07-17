@@ -12,6 +12,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useToast } from "@/hooks/use-toast";
 import { useLeaveGuard } from "@/hooks/useLeaveGuard";
+import { useStrings } from "@/context/LanguageContext";
 
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -29,16 +30,15 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 // Mirrors the server's distanceToRadius ladder in server/index.js so the
 // broadened-search banner can show a human-readable label for the radius
 // actually used.
-const RADIUS_TO_LABEL = {
-    1610: "Walking distance (0-1 miles)",
-    8047: "Short drive (1-5 miles)",
-    24145: "Moderate drive (5-15 miles)",
-    50000: "Long drive (15+ miles)",
-};
-
-function radiusToLabel(radiusMeters) {
+function radiusToLabel(radiusMeters, t) {
+    const radiusToLabelMap = {
+        1610: t.results.radiusWalking,
+        8047: t.results.radiusShortDrive,
+        24145: t.results.radiusModerateDrive,
+        50000: t.results.radiusLongDrive,
+    };
     if (!radiusMeters) return null;
-    if (RADIUS_TO_LABEL[radiusMeters]) return RADIUS_TO_LABEL[radiusMeters];
+    if (radiusToLabelMap[radiusMeters]) return radiusToLabelMap[radiusMeters];
     const miles = (radiusMeters / 1609.34).toFixed(1);
     return `~${miles} miles`;
 }
@@ -99,6 +99,7 @@ export const Results = () => {
     const { code } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const t = useStrings();
 
     useLeaveGuard({ socket, code });
 
@@ -133,7 +134,7 @@ export const Results = () => {
         className: '',
         html: `<div style="display:flex;flex-direction:column;align-items:center">
             <div style="width:14px;height:14px;background:#ef4444;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>
-            <span style="font-size:10px;font-weight:700;color:#ef4444;white-space:nowrap;margin-top:3px;text-shadow:0 1px 2px white">You are here</span>
+            <span style="font-size:10px;font-weight:700;color:#ef4444;white-space:nowrap;margin-top:3px;text-shadow:0 1px 2px white">${t.results.youAreHere}</span>
         </div>`,
         iconSize: [80, 36],
         iconAnchor: [40, 8],
@@ -238,8 +239,8 @@ export const Results = () => {
 
         const handleHostTransferred = ({ newHost }) => {
             toast({
-                title: "New host",
-                description: `${newHost} is now the host.`,
+                title: t.results.newHostTitle,
+                description: t.results.newHostDescription(newHost),
                 duration: 2500,
             });
         };
@@ -263,7 +264,7 @@ export const Results = () => {
             socket.off('cursorLeave', handleRemoteCursorLeave);
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [code, socket, toast]);
+    }, [code, socket, toast, t]);
 
     const handleSelectPlace = (place) => {
         if (selectedPlaceId === place.place_id) {
@@ -317,7 +318,7 @@ export const Results = () => {
                 <div className="bg-[#e8f0e8] px-6 pt-6 flex flex-col items-center justify-center">
                     <div className="flex items-center gap-3 mb-6">
                         <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />
-                        <h1 className="text-3xl font-bold text-[#1a2e1a]">We&apos;re going to...</h1>
+                        <h1 className="text-3xl font-bold text-[#1a2e1a]">{t.results.goingTo}</h1>
                         <Trophy className="w-8 h-8 text-yellow-500 fill-yellow-400" />
                     </div>
 
@@ -358,7 +359,7 @@ export const Results = () => {
                                 <div className="flex gap-2 items-center">
                                     <Clock className="w-4 h-4 shrink-0 text-muted-foreground" />
                                     <span className={`text-sm font-semibold ${details.opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
-                                        {details.opening_hours.open_now ? 'Open now' : 'Closed'}
+                                        {details.opening_hours.open_now ? t.results.openNow : t.results.closed}
                                     </span>
                                 </div>
                             )}
@@ -381,7 +382,7 @@ export const Results = () => {
                                 <a href={details.url} target="_blank" rel="noopener noreferrer"
                                     className="flex items-center gap-2 text-sm text-[#2d6a2d] hover:underline pt-1">
                                     <ExternalLink className="w-4 h-4" />
-                                    View on Google Maps
+                                    {t.results.viewOnGoogleMaps}
                                 </a>
                             )}
                         </div>
@@ -392,7 +393,7 @@ export const Results = () => {
                         className="mt-6 mb-6 bg-[#1a2e1a] hover:bg-[#2d6a2d] text-white"
                     >
                         <LogOut className="w-4 h-4 mr-2" />
-                        Exit
+                        {t.results.exit}
                     </Button>
                 </div>
             </Layout>
@@ -411,10 +412,10 @@ export const Results = () => {
                         <span className={`text-xl font-bold tabular-nums ${timerColor}`}>{timeLeft}s</span>
                     </div>
                     <div className="text-sm font-semibold text-[#1a2e1a] bg-white px-4 py-1.5 rounded-full shadow-sm">
-                        {voteCount.voted} / {voteCount.total || lockedPlayers.length} voted
+                        {voteCount.voted} / {voteCount.total || lockedPlayers.length} {t.results.votedSuffix}
                     </div>
                     {!isLocked && (
-                        <span className="text-sm text-[#5a7a5a] italic">👀 Watching</span>
+                        <span className="text-sm text-[#5a7a5a] italic">{t.results.watching}</span>
                     )}
                 </div>
 
@@ -422,9 +423,9 @@ export const Results = () => {
                     <div role="status" className="w-[90%] lg:w-[80%] mx-auto mb-3 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-2">
                         <MapPin className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                         <span>
-                            We broadened the search area to find more options
+                            {t.results.broadenedSearchText}
                             <span className="hidden sm:inline">
-                                {radiusUsed ? ` (now searching within ${radiusToLabel(radiusUsed)})` : ''}
+                                {radiusUsed ? t.results.broadenedSearchRadius(radiusToLabel(radiusUsed, t)) : ''}
                             </span>
                             .
                         </span>
@@ -481,7 +482,7 @@ export const Results = () => {
                                             >
                                                 <span className="font-medium flex-1 truncate">{place.name}</span>
                                                 {hasVotedThis && (
-                                                    <span className="text-xs text-[#2d6a2d] font-semibold shrink-0">✓ Voted</span>
+                                                    <span className="text-xs text-[#2d6a2d] font-semibold shrink-0">{t.results.votedCheck}</span>
                                                 )}
                                                 {isExpanded
                                                     ? <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" />
@@ -532,7 +533,7 @@ export const Results = () => {
                                                                 <div className="flex gap-2 items-center">
                                                                     <Clock className="w-4 h-4 shrink-0 text-muted-foreground" />
                                                                     <span className={`text-sm font-semibold ${details.opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
-                                                                        {details.opening_hours.open_now ? 'Open now' : 'Closed'}
+                                                                        {details.opening_hours.open_now ? t.results.openNow : t.results.closed}
                                                                     </span>
                                                                 </div>
                                                             )}
@@ -555,7 +556,7 @@ export const Results = () => {
                                                                 <a href={details.url} target="_blank" rel="noopener noreferrer"
                                                                     className="flex items-center gap-2 text-sm text-[#2d6a2d] hover:underline pt-1">
                                                                     <ExternalLink className="w-4 h-4" />
-                                                                    View on Google Maps
+                                                                    {t.results.viewOnGoogleMaps}
                                                                 </a>
                                                             )}
 
@@ -572,7 +573,7 @@ export const Results = () => {
                                                                                 : 'bg-[#2d6a2d] hover:bg-[#266226] text-white cursor-pointer'
                                                                     }`}
                                                                 >
-                                                                    {hasVotedThis ? '✓ Your vote' : myVote ? 'Already voted' : 'Vote for this'}
+                                                                    {hasVotedThis ? t.results.yourVote : myVote ? t.results.alreadyVoted : t.results.voteForThis}
                                                                 </button>
                                                             )}
                                                         </>
@@ -638,7 +639,7 @@ export const Results = () => {
                                                         <div className="flex gap-2 items-center">
                                                             <Clock className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                                                             <span className={`text-sm font-medium ${placeDetailsMap[place.place_id].opening_hours.open_now ? 'text-green-600' : 'text-red-500'}`}>
-                                                                {placeDetailsMap[place.place_id].opening_hours.open_now ? 'Open now' : 'Closed'}
+                                                                {placeDetailsMap[place.place_id].opening_hours.open_now ? t.results.openNow : t.results.closed}
                                                             </span>
                                                         </div>
                                                     )}

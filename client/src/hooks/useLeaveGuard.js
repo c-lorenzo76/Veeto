@@ -1,11 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-
-const PLAYER_LEAVE_MESSAGE =
-    "Leave the game? You'll be removed and the others will continue without you.";
-const HOST_LEAVE_MESSAGE =
-    "Leave as host? Another player will take over and the game will continue. " +
-    "If you're the only player, this will end the game.";
+import { useStrings } from "@/context/LanguageContext";
 
 /**
  * Warns before an in-progress lobby session is abandoned via browser back/forward
@@ -18,10 +13,13 @@ const HOST_LEAVE_MESSAGE =
 export function useLeaveGuard({ socket, code, isHost: isHostProp }) {
     const navigate = useNavigate();
     const location = useLocation();
+    const t = useStrings();
     const isHostRef = useRef(isHostProp ?? false);
     const socketRef = useRef(socket);
     const codeRef = useRef(code);
     const guardPathRef = useRef(location.pathname + location.search);
+    const stringsRef = useRef(t);
+    stringsRef.current = t;
 
     useEffect(() => {
         if (isHostProp !== undefined) isHostRef.current = isHostProp;
@@ -65,7 +63,8 @@ export function useLeaveGuard({ socket, code, isHost: isHostProp }) {
 
         const handlePopState = () => {
             const host = isHostRef.current;
-            const confirmed = window.confirm(host ? HOST_LEAVE_MESSAGE : PLAYER_LEAVE_MESSAGE);
+            const { hostLeaveMessage, playerLeaveMessage } = stringsRef.current.leaveGuard;
+            const confirmed = window.confirm(host ? hostLeaveMessage : playerLeaveMessage);
 
             if (!confirmed) {
                 navigate(guardPathRef.current, { replace: false });

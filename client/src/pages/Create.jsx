@@ -24,6 +24,7 @@ import { ChevronRight, User, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSocket } from "@/SocketContext"
 import AvatarSelection from "@/components/AvatarSelection";
+import { useStrings } from "@/context/LanguageContext";
 
 export const Create = () => {
 
@@ -32,6 +33,7 @@ export const Create = () => {
 
     const navigate = useNavigate();
     const { socket } = useSocket();
+    const t = useStrings();
 
 
     useEffect(() => {
@@ -47,18 +49,18 @@ export const Create = () => {
 
     const handleLocationError = (error) => {
         if (error.code === error.PERMISSION_DENIED) {
-            alert('Location access was denied. To re-enable it, go to Safari Settings → Websites → Location, find localhost, and set it to "Allow". Then reload the page.');
+            alert(t.create.locationDenied);
         } else if (error.code === error.POSITION_UNAVAILABLE) {
-            alert('Location information is unavailable. Please try again.');
+            alert(t.create.locationUnavailable);
         } else if (error.code === error.TIMEOUT) {
-            alert('Location request timed out. Please try again.');
+            alert(t.create.locationTimeout);
         }
     };
 
     // asks for location
     const handleLocation = () => {
         if(!navigator.geolocation){
-            alert('Geolocation is not supported by your browser');
+            alert(t.create.geolocationNotSupported);
         } else{
             navigator.geolocation.getCurrentPosition(createLobby, handleLocationError);
         }
@@ -97,10 +99,10 @@ export const Create = () => {
                 <Card className="w-full max-w-sm bg-gray-50">
                     <CardHeader>
                         <CardTitle className="text-5xl flex justify-center">
-                            create
+                            {t.create.title}
                         </CardTitle>
                         <CardDescription className="text-center">
-                            Enter your name below to be displayed to others
+                            {t.create.description}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4">
@@ -132,10 +134,10 @@ export const Create = () => {
                                 <DialogContent className="sm:max-w-[425px]">
                                     <DialogHeader>
                                         <DialogTitle>
-                                            Select avatar
+                                            {t.create.selectAvatarTitle}
                                         </DialogTitle>
                                         <DialogDescription>
-                                            Choose an avatar to be viewed by others
+                                            {t.create.selectAvatarDescription}
                                         </DialogDescription>
                                     </DialogHeader>
                                     <DialogClose>
@@ -145,17 +147,17 @@ export const Create = () => {
                             </Dialog>
                         </div>
                         <CardDescription className="text-center">
-                            Select an avatar if you&apos;d like...
+                            {t.create.avatarOptional}
                         </CardDescription>
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input id="name" type="text" placeholder="Neo" onChange={(e) => setName(e.target.value)} required />
+                            <Label htmlFor="name">{t.create.nameLabel}</Label>
+                            <Input id="name" type="text" placeholder={t.create.namePlaceholder} onChange={(e) => setName(e.target.value)} required />
                         </div>
                     </CardContent>
                     <CardFooter>
                         <Button className="w-full" onClick={handleLocation}>
                             <ChevronRight/>
-                            create
+                            {t.create.createButton}
                         </Button>
                     </CardFooter>
                 </Card>

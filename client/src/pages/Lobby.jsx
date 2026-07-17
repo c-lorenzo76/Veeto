@@ -7,12 +7,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"
 import { useLeaveGuard } from "@/hooks/useLeaveGuard";
+import { useStrings } from "@/context/LanguageContext";
 
 export const Lobby = () => {
     const { socket } = useSocket();
     const { code } = useParams(); // Extract lobby code from the URL parameters
     const navigate = useNavigate();
     const { toast } = useToast();
+    const t = useStrings();
 
     const [users, setUsers] = useState([]);
     const [lobbyCode, setLobbyCode] = useState('');
@@ -59,8 +61,8 @@ export const Lobby = () => {
 
         socket.on("hostTransferred", ({ newHost }) => {
             toast({
-                title: "New host",
-                description: `${newHost} is now the host.`,
+                title: t.lobby.newHostTitle,
+                description: t.lobby.newHostDescription(newHost),
                 duration: 2500,
             });
         });
@@ -74,7 +76,7 @@ export const Lobby = () => {
             socket.off("hostLeft");
             socket.off("hostTransferred");
         };
-    }, [code, socket]);
+    }, [code, socket, t]);
 
     const handleStartGame = () => {
         socket.emit('startGame', { lobbyCode: code });
@@ -89,8 +91,8 @@ export const Lobby = () => {
             .then(
                 () => {
                     toast({
-                        title: "PIN Copied",
-                        description: "Lobby PIN has been copied to clipboard.",
+                        title: t.lobby.pinCopiedTitle,
+                        description: t.lobby.pinCopiedDescription,
                         duration: 1500,
                         variant: "default",
                     });
@@ -99,8 +101,8 @@ export const Lobby = () => {
             ).catch(
                 (err) => {
                     toast({
-                        title: "Error",
-                        description: "Failed to copy PIN to clipboard. Try again.",
+                        title: t.lobby.errorTitle,
+                        description: t.lobby.errorCopyDescription,
                         variant: "destructive",
                     });
                     console.error('Failed to copy: ', err);
@@ -112,7 +114,7 @@ export const Lobby = () => {
 
         <div className="flex flex-col min-h-screen bg-[#c8dcc8]">
 
-            <div className="flex mx-auto items-left w-[90%] lg:w-[80%] p-6 bg-[#1a2e1a] mt-8 rounded-3xl">
+            <div className="flex flex-wrap gap-2 mx-auto items-left w-[90%] lg:w-[80%] p-6 bg-[#1a2e1a] mt-8 rounded-3xl">
                 <div className="flex items-center">
                     <span className="text-lg text-white font-bold">Ve</span>
                     <span className="text-lg text-yellow-500 font-bold">to</span>
@@ -125,11 +127,11 @@ export const Lobby = () => {
                                 className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8"
                                 onClick={handleStartGame}
                             >
-                                Start
+                                {t.lobby.start}
                             </Button>
                         )}
                         {!isHost && (
-                            <span className="text-gray-300 italic">Waiting for host to start...</span>
+                            <span className="text-gray-300 italic">{t.lobby.waitingForHost}</span>
                         )}
                     </div>
                 </div>
@@ -146,10 +148,10 @@ export const Lobby = () => {
             >
                 <div className="game-pin w-[90%] lg:w-[80%] mx-auto flex flex-col items-left p-10 bg-[#1a2e1a] mt-6 rounded-3xl" >
                     <h6 className="text-[#2d6a2d] font-bold">
-                        ROOM PIN
+                        {t.lobby.roomPin}
                     </h6>
                     <h1 className="flex items-left text-4xl font-bold text-white tracking-wider">
-                        {lobbyCode || 'Loading...'}
+                        {lobbyCode || t.lobby.loading}
                         <Copy className={"ml-2 cursor-pointer"}
                             onClick={() => {
                                 if (lobbyCode) {
@@ -221,10 +223,10 @@ export const Lobby = () => {
             </div> */}
 
             <div className="flex mx-auto w-[90%] lg:w-[80%] mt-6">
-                <h2 className=" text-2xl font-bold text-black">PLAYERS</h2>
+                <h2 className=" text-2xl font-bold text-black">{t.lobby.players}</h2>
                 <div className="flex items-center ml-auto">
                     <span className="text-black">{users.length}</span>
-                    <span className="ml-2 text-gray-500">joined</span>
+                    <span className="ml-2 text-gray-500">{t.lobby.joined}</span>
                 </div>
             </div>
 
@@ -232,7 +234,7 @@ export const Lobby = () => {
                 <div className="m-8 mx-auto w-[90%] lg:w-[80%]">
                     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ">
                         {users.map((user, index) => {
-                            const displayName = user?.name || "Player";
+                            const displayName = user?.name || t.lobby.playerFallback;
                             const avatarSrc = user?.avatar || null;
 
                             return (
