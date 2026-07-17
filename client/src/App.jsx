@@ -7,6 +7,7 @@ import {Lobby} from "./pages/Lobby";
 import {Questions} from "./pages/Questions";
 import {Results} from "./pages/Results";
 import {SocketProvider} from "./SocketContext";
+import {LanguageProvider} from "./context/LanguageContext";
 import { Toaster } from "@/components/ui/toaster";
 
 
@@ -14,17 +15,19 @@ import { Toaster } from "@/components/ui/toaster";
 const App = () => {
     return (
         <BrowserRouter>
-            <SocketProvider>
-                <Routes>
-                    <Route index element={<Home/>}/>
-                    <Route path={"Create"} element={<Create/>}/>
-                    <Route path={"Join"} element={<Join/>}/>
-                    <Route path={"Lobby/:code"} element={<Lobby/>}/>
-                    <Route path={"Questions/:code"} element={<Questions/>}/>
-                    <Route path={"Results/:code"} element={<Results/>}/>
-                </Routes>
-            </SocketProvider>
-            <Toaster />
+            <LanguageProvider>
+                <SocketProvider>
+                    <Routes>
+                        <Route index element={<Home/>}/>
+                        <Route path={"Create"} element={<Create/>}/>
+                        <Route path={"Join"} element={<Join/>}/>
+                        <Route path={"Lobby/:code"} element={<Lobby/>}/>
+                        <Route path={"Questions/:code"} element={<Questions/>}/>
+                        <Route path={"Results/:code"} element={<Results/>}/>
+                    </Routes>
+                </SocketProvider>
+                <Toaster />
+            </LanguageProvider>
         </BrowserRouter>
     )
 

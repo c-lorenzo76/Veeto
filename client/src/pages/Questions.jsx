@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { useToast } from "@/hooks/use-toast";
 import { useLeaveGuard } from "@/hooks/useLeaveGuard";
+import { useStrings } from "@/context/LanguageContext";
 
 function CircularTimer({ timeLeft, duration }) {
     const size = 88;
@@ -58,6 +59,7 @@ export const Questions = () => {
     const { code } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const t = useStrings();
 
     useLeaveGuard({ socket, code });
 
@@ -95,8 +97,8 @@ export const Questions = () => {
 
         const handleHostTransferred = ({ newHost }) => {
             toast({
-                title: "New host",
-                description: `${newHost} is now the host.`,
+                title: t.questions.newHostTitle,
+                description: t.questions.newHostDescription(newHost),
                 duration: 2500,
             });
         };
@@ -152,7 +154,7 @@ export const Questions = () => {
             socket.off('Error', handleError);
             if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
         };
-    }, [socket, code, navigate, toast]);
+    }, [socket, code, navigate, toast, t]);
 
     // Total votes on current question
     const totalVotes = useMemo(() => {
@@ -193,17 +195,17 @@ export const Questions = () => {
                             <CircularTimer timeLeft={timeLeft} duration={duration} />
                             <div>
                                 <p className="text-xs font-semibold tracking-wide text-[#5a7a5a] uppercase mb-1">
-                                    Question {currentQuestion + 1} of {poll?.questions.length || 0}
+                                    {t.questions.questionOf(currentQuestion + 1, poll?.questions.length || 0)}
                                 </p>
                                 <h1 className={"text-2xl font-bold text-[#1a2e1a]"}>
-                                    {poll.questions[currentQuestion].question}
+                                    {t.poll[poll.questions[currentQuestion].id].question}
                                 </h1>
                             </div>
                         </div>
 
                         {!isLocked && (
                             <p className="text-center text-sm text-[#5a7a5a] mt-2">
-                                👀 You are watching — voting is locked to original players
+                                {t.questions.watchingBanner}
                             </p>
                         )}
 
@@ -215,7 +217,7 @@ export const Questions = () => {
                                 >
                                     <div className={"z-10"}>
                                         <div className={"mb-2"}>
-                                            <h2 className={"text-xl font-semibold text-[#1a2e1a]"}>{option.text}</h2>
+                                            <h2 className={"text-xl font-semibold text-[#1a2e1a]"}>{t.poll[poll.questions[currentQuestion].id].options[option.id]}</h2>
                                         </div>
 
                                         {/* Vote button — only for locked-in players */}
@@ -226,11 +228,11 @@ export const Questions = () => {
                                                         className={"bg-[#2d6a2d] hover:bg-[#266226] text-white md:p-2"}
                                                         onClick={() => handleVote(option.id)}
                                                     >
-                                                        Vote
+                                                        {t.questions.vote}
                                                     </Button>
                                                 ) : (
                                                     <Button disabled className={"bg-[#c8dcc8] text-[#1a2e1a] md:p-2"}>
-                                                        Voted
+                                                        {t.questions.voted}
                                                     </Button>
                                                 )}
                                             </div>

@@ -14,24 +14,36 @@ import {
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage, useStrings } from "@/context/LanguageContext";
 import './Home.css';
+
+const LANGUAGE_OPTIONS = [
+    { value: "en", label: "English" },
+    { value: "es", label: "Español" },
+    { value: "fr", label: "Français" },
+    { value: "it", label: "Italiano" },
+    { value: "pt", label: "Português" },
+    { value: "ru", label: "Русский" },
+];
 
 export const Home = () => {
     const location = useLocation();
     const { toast } = useToast();
+    const { language, setLanguage } = useLanguage();
+    const t = useStrings();
 
     useEffect(() => {
         if (location.state?.kicked) {
             toast({
-                title: "Kicked from lobby",
-                description: "The host has removed you from the lobby.",
+                title: t.home.kickedTitle,
+                description: t.home.kickedDescription,
                 variant: "destructive",
                 duration: 4000,
             });
         } else if (location.state?.hostLeft) {
             toast({
-                title: "Host has left",
-                description: "The host disconnected and the lobby has been closed.",
+                title: t.home.hostLeftTitle,
+                description: t.home.hostLeftDescription,
                 variant: "destructive",
                 duration: 4000,
             });
@@ -50,27 +62,30 @@ export const Home = () => {
                         ease: "easeInOut",
                     }}
                 >
-                    <Select>
-                        <SelectTrigger className={"flex border-0 hover:border-0 hover:shadow-md w-fit "}>
+                    <Select value={language} onValueChange={setLanguage}>
+                        <SelectTrigger className="flex border-0 hover:shadow-md w-fit" aria-label={t.home.languageLabel}>
                             <SelectValue
                                 placeholder={
                                     <div
                                         className={"flex items-center justify-center ml-1 mr-1 space-x-2 text-xl font-bold"}>
                                         <FaEarthAmericas/>
-                                        <span>EN</span>
+                                        <span>{language.toUpperCase()}</span>
                                     </div>
                                 }
                             >
+                                <div
+                                    className={"flex items-center justify-center ml-1 mr-1 space-x-2 text-xl font-bold"}>
+                                    <FaEarthAmericas/>
+                                    <span>{language.toUpperCase()}</span>
+                                </div>
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
-                                <SelectLabel>English</SelectLabel>
-                                <SelectItem value="Spanish">Spanish</SelectItem>
-                                <SelectItem value="French">French</SelectItem>
-                                <SelectItem value="Italian">Italian</SelectItem>
-                                <SelectItem value="Portuguese">Portuguese</SelectItem>
-                                <SelectItem value="Russian">Russian</SelectItem>
+                                <SelectLabel>{t.home.languageLabel}</SelectLabel>
+                                {LANGUAGE_OPTIONS.map(({ value, label }) => (
+                                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                                ))}
                             </SelectGroup>
                         </SelectContent>
                     </Select>
@@ -104,8 +119,8 @@ export const Home = () => {
                                     ease: "easeInOut",
                                 }}
                             >
-                                <Button className="w-40 text-white">
-                                    Create
+                                <Button className="min-w-40 px-6 text-white">
+                                    {t.home.create}
                                     <CirclePlus className="ml-1"/>
                                 </Button>
                             </motion.div>
@@ -120,8 +135,8 @@ export const Home = () => {
                                     ease: "easeInOut",
                                 }}
                             >
-                                <Button className="w-40 text-white">
-                                    Join
+                                <Button className="min-w-40 px-6 text-white">
+                                    {t.home.join}
                                     <Radio className="ml-1.5"/>
                                 </Button>
                             </motion.div>
