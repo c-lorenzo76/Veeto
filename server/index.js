@@ -249,6 +249,8 @@ io.on("connection", socket => {
                     places: lobbyObj.places,
                     coords: lobbyObj.coords,
                     lockedPlayers: lobbyObj.lockedPlayers,
+                    radiusUsed: lobbyObj.searchMeta?.radiusUsed,
+                    searchBroadened: lobbyObj.searchMeta?.searchBroadened,
                 });
             }
             const voted = Object.keys(lobbyObj.restaurantVotes).length;
@@ -592,14 +594,17 @@ async function emitGetPlaces(code) {
     if (!lobby) return;
 
     const selectedOptions = getMostVotedOptions(lobby);
-    const places = await searchPlaces(selectedOptions, lobby.coords);
+    const { results: places, radiusUsed, searchBroadened } = await searchPlaces(selectedOptions, lobby.coords);
 
     lobby.places = places;
+    lobby.searchMeta = { radiusUsed, searchBroadened };
 
     io.to(code).emit('getPlaces', {
         places,
         coords: lobby.coords,
         lockedPlayers: lobby.lockedPlayers,
+        radiusUsed,
+        searchBroadened,
     });
 
     console.log('SENT TO RESULTS', places[0]);
@@ -613,17 +618,22 @@ function getMostVotedOptions(lobby) {
     });
 }
 
+const DISTANCE_TO_RADIUS = {
+    "Walking distance (0-1 miles)": 1610,
+    "Short drive (1-5 miles)":      8047,
+    "Moderate drive (5-15 miles)":  24145,
+    "Long drive (15+ miles)":       50000,
+};
+
+// Ordered ladder of tiers used to escalate the search radius when results are sparse.
+const RADIUS_LADDER = [1610, 8047, 24145, 50000];
+
+const MIN_ACCEPTABLE_RESULTS = 5;
+
 async function searchPlaces(selectedOptions, coords) {
     const price    = selectedOptions[1];
     const cuisine  = selectedOptions[2];
     const distance = selectedOptions[3];
-
-    const distanceToRadius = {
-        "Walking distance (0-1 miles)": 1610,
-        "Short drive (1-5 miles)":      8047,
-        "Moderate drive (5-15 miles)":  24145,
-        "Long drive (15+ miles)":       50000,
-    };
 
     const priceToLevel = {
         "$":    1,
@@ -632,27 +642,56 @@ async function searchPlaces(selectedOptions, coords) {
         "$$$$": 4,
     };
 
-    const radius = distanceToRadius[distance] || 8047;
+    const startingRadius = DISTANCE_TO_RADIUS[distance] || 8047;
     const priceLevel = priceToLevel[price];
-    const query = `${cuisine} restaurant`;
+    // Note: Google's Places API `keyword` param is documented for Nearby Search,
+    // not Text Search — Text Search only formally supports `query` as its text
+    // signal, so `keyword` would be silently ignored here. Instead we strengthen
+    // the free-text query itself: leading with the cuisine and pairing it with
+    // "food" (in addition to "restaurant") reinforces the cuisine term relative
+    // to the generic "restaurant" word, biasing relevance ranking toward it.
+    const query = `${cuisine} food restaurant`;
 
-    console.log(`Searching: "${query}" within ${radius}m of ${coords}, price level ${priceLevel}`);
+    let startIndex = RADIUS_LADDER.indexOf(startingRadius);
+    if (startIndex === -1) startIndex = 1;
 
-    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${coords}&radius=${radius}&type=restaurant&key=${process.env.SECRET_KEY}`;
-    if (priceLevel) {
-        url += `&minprice=${priceLevel}&maxprice=${priceLevel}`;
-    }
+    let results = [];
+    let radiusUsed = startingRadius;
+    let searchBroadened = false;
 
-    try {
-        const response = await axios.get(url);
-        if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-            console.error('Places API error:', response.data.status, response.data.error_message);
+    for (let i = startIndex; i < RADIUS_LADDER.length; i++) {
+        const radius = RADIUS_LADDER[i];
+        radiusUsed = radius;
+
+        console.log(`Searching: "${query}" within ${radius}m of ${coords}, price level ${priceLevel}`);
+
+        let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${coords}&radius=${radius}&type=restaurant&key=${process.env.SECRET_KEY}`;
+        if (priceLevel) {
+            url += `&maxprice=${priceLevel}`;
         }
-        return response.data.results;
-    } catch (error) {
-        console.error('Error searching places:', error);
-        return [];
+
+        try {
+            const response = await axios.get(url);
+            if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+                console.error('Places API error:', response.data.status, response.data.error_message);
+                break;
+            }
+
+            results = response.data.results || [];
+
+            if (results.length >= MIN_ACCEPTABLE_RESULTS || i === RADIUS_LADDER.length - 1) {
+                break;
+            }
+
+            // Not enough results yet and there's a larger tier available — broaden and retry.
+            searchBroadened = true;
+        } catch (error) {
+            console.error('Error searching places:', error);
+            return { results: [], radiusUsed, searchBroadened };
+        }
     }
+
+    return { results, radiusUsed, searchBroadened };
 }
 
 if (require.main === module) {
