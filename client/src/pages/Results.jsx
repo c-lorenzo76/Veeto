@@ -26,6 +26,23 @@ L.Icon.Default.mergeOptions({
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
+// Mirrors the server's distanceToRadius ladder in server/index.js so the
+// broadened-search banner can show a human-readable label for the radius
+// actually used.
+const RADIUS_TO_LABEL = {
+    1610: "Walking distance (0-1 miles)",
+    8047: "Short drive (1-5 miles)",
+    24145: "Moderate drive (5-15 miles)",
+    50000: "Long drive (15+ miles)",
+};
+
+function radiusToLabel(radiusMeters) {
+    if (!radiusMeters) return null;
+    if (RADIUS_TO_LABEL[radiusMeters]) return RADIUS_TO_LABEL[radiusMeters];
+    const miles = (radiusMeters / 1609.34).toFixed(1);
+    return `~${miles} miles`;
+}
+
 function MapController({ selectedPlaceId, places }) {
     const map = useMap();
     useEffect(() => {
@@ -100,6 +117,8 @@ export const Results = () => {
     const [phase, setPhase] = useState('voting'); // 'voting' | 'winner'
     const [winnerPlace, setWinnerPlace] = useState(null);
     const [winnerDetails, setWinnerDetails] = useState(null);
+    const [searchBroadened, setSearchBroadened] = useState(false);
+    const [radiusUsed, setRadiusUsed] = useState(null);
 
     const [remoteCursors, setRemoteCursors] = useState({}); // { username: { x, y, avatar } }
 
@@ -123,9 +142,11 @@ export const Results = () => {
     useEffect(() => {
         if (!socket) return;
 
-        const handleGetPlaces = ({ places, coords, lockedPlayers: lp }) => {
+        const handleGetPlaces = ({ places, coords, lockedPlayers: lp, radiusUsed: radius, searchBroadened: broadened }) => {
             setPlaces(places);
             setLoading(false);
+            setRadiusUsed(radius ?? null);
+            setSearchBroadened(Boolean(broadened));
             if (lp) setLockedPlayers(lp);
             if (coords) {
                 const [lat, lng] = coords.split(',').map(Number);
@@ -381,7 +402,7 @@ export const Results = () => {
     // ── Voting screen ─────────────────────────────────────────
     return (
         <Layout user={socket.auth.token} avatar={socket.auth.avatar}>
-            <div className="bg-[#e8f0e8] px-6 pt-4 min-h-screen">
+            <div className="bg-[#e8f0e8] px-6 pt-4 min-h-screen flex flex-col">
 
                 {/* Timer + vote count bar */}
                 <div className="flex w-[90%] lg:w-[80%] mx-auto items-center justify-between py-3">
@@ -397,7 +418,20 @@ export const Results = () => {
                     )}
                 </div>
 
-                <div className="flex w-[90%] lg:w-[80%] mx-auto gap-4 pb-6" style={{ height: 'calc(100vh - 160px)' }}>
+                {searchBroadened && (
+                    <div role="status" className="w-[90%] lg:w-[80%] mx-auto mb-3 px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-2">
+                        <MapPin className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>
+                            We broadened the search area to find more options
+                            <span className="hidden sm:inline">
+                                {radiusUsed ? ` (now searching within ${radiusToLabel(radiusUsed)})` : ''}
+                            </span>
+                            .
+                        </span>
+                    </div>
+                )}
+
+                <div className="flex w-[90%] lg:w-[80%] mx-auto gap-4 pb-6 flex-1 min-h-0">
 
                     {/* Left: restaurant list with live cursors */}
                     <FollowerPointerCard
