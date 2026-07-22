@@ -100,6 +100,7 @@ const GlowingEffect = memo(({
   return (
     <>
       <div
+        aria-hidden="true"
         className={cn(
           "pointer-events-none absolute -inset-px hidden rounded-[inherit] border opacity-0 transition-opacity",
           glow && "opacity-100",
@@ -107,6 +108,7 @@ const GlowingEffect = memo(({
           disabled && "!block"
         )} />
       <div
+        aria-hidden="true"
         ref={containerRef}
         style={
           {

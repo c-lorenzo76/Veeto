@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage, useStrings } from "@/context/LanguageContext";
@@ -31,6 +31,14 @@ export const Home = () => {
     const { toast } = useToast();
     const { language, setLanguage } = useLanguage();
     const t = useStrings();
+    const reducedMotion = useReducedMotion();
+    // All entrance animations on this page share the same delay/duration/ease,
+    // just with different initial offsets, so compute the transition once.
+    const entranceTransition = {
+        delay: reducedMotion ? 0 : 0.3,
+        duration: reducedMotion ? 0 : 0.8,
+        ease: "easeInOut",
+    };
 
     useEffect(() => {
         if (location.state?.kicked) {
@@ -54,13 +62,9 @@ export const Home = () => {
         <div className="flex flex-col h-screen">
             <div className="flex justify-end p-8">
                 <motion.div
-                    initial={{opacity: 0.0, x: 40}}
+                    initial={reducedMotion ? false : {opacity: 0.0, x: 40}}
                     whileInView={{opacity: 1, x: 0}}
-                    transition={{
-                        delay: 0.3,
-                        duration: 0.8,
-                        ease: "easeInOut",
-                    }}
+                    transition={entranceTransition}
                 >
                     <Select value={language} onValueChange={setLanguage}>
                         <SelectTrigger className="flex border-0 hover:shadow-md w-fit" aria-label={t.home.languageLabel}>
@@ -95,13 +99,9 @@ export const Home = () => {
                 <div className="-mt-56">
                     <div className="w-full flex justify-center">
                         <motion.div
-                            initial={{opacity: 0.0, y: 40}}
+                            initial={reducedMotion ? false : {opacity: 0.0, y: 40}}
                             whileInView={{opacity: 1, y: 0}}
-                            transition={{
-                                delay: 0.3,
-                                duration: 0.8,
-                                ease: "easeInOut",
-                            }}
+                            transition={entranceTransition}
                         >
                             <img src="/veto-logo.png" alt="Veto" className="w-64" />
                         </motion.div>
@@ -111,13 +111,9 @@ export const Home = () => {
                     <div className="flex flex-col space-y-4">
                         <Link to={"/Create"}>
                             <motion.div
-                                initial={{opacity: 0.0, y: 40}}
+                                initial={reducedMotion ? false : {opacity: 0.0, y: 40}}
                                 whileInView={{opacity: 1, y: 0}}
-                                transition={{
-                                    delay: 0.3,
-                                    duration: 0.8,
-                                    ease: "easeInOut",
-                                }}
+                                transition={entranceTransition}
                             >
                                 <Button className="min-w-40 px-6 text-white">
                                     {t.home.create}
@@ -127,13 +123,9 @@ export const Home = () => {
                         </Link>
                         <Link to={"/Join"}>
                             <motion.div
-                                initial={{opacity: 0.0, y: 40}}
+                                initial={reducedMotion ? false : {opacity: 0.0, y: 40}}
                                 whileInView={{opacity: 1, y: 0}}
-                                transition={{
-                                    delay: 0.3,
-                                    duration: 0.8,
-                                    ease: "easeInOut",
-                                }}
+                                transition={entranceTransition}
                             >
                                 <Button className="min-w-40 px-6 text-white">
                                     {t.home.join}

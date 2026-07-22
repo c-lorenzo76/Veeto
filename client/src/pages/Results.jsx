@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Phone, Globe, ExternalLink, ChevronDown, ChevronUp, Timer, Trophy, LogOut } from "lucide-react";
 import { FollowerPointerCard } from "@/components/ui/following-pointer";
-import { AnimatePresence, motion, useMotionValue, useSpring } from "motion/react";
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -198,7 +198,7 @@ function RemoteCursor({ user, avatar, x, y }) {
                 <path d="M14.082 2.182a.5.5 0 0 1 .103.557L8.528 15.467a.5.5 0 0 1-.917-.007L5.57 10.694.803 8.652a.5.5 0 0 1-.006-.916l12.728-5.657a.5.5 0 0 1 .556.103z" />
             </svg>
             <div className="ml-4 -mt-1 flex items-center gap-1.5 bg-[#1a2e1a] text-white text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap shadow">
-                {avatar && <img src={avatar} alt="" className="w-4 h-4 rounded-full object-cover" />}
+                {avatar && <img src={avatar} alt="" aria-hidden="true" className="w-4 h-4 rounded-full object-cover" />}
                 <span>{user}</span>
             </div>
         </motion.div>
@@ -211,6 +211,7 @@ export const Results = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const t = useStrings();
+    const reducedMotion = useReducedMotion();
 
     const [isHost, setIsHost] = useState(false);
 
@@ -671,9 +672,9 @@ export const Results = () => {
                                     return (
                                         <motion.div
                                             key={place.place_id}
-                                            initial={{ opacity: 0, y: 10 }}
+                                            initial={reducedMotion ? false : { opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.3, ease: "easeOut", delay: index * 0.04 }}
+                                            transition={{ duration: reducedMotion ? 0 : 0.3, ease: "easeOut", delay: reducedMotion ? 0 : index * 0.04 }}
                                             className={`rounded-xl border shadow-sm hover:shadow-md transition-shadow overflow-hidden ${hasVotedThis ? 'border-[#2d6a2d] bg-[#e8f0e8]' : 'border-[#c8dcc8] bg-white'}`}
                                         >
                                             <div
@@ -692,9 +693,9 @@ export const Results = () => {
 
                                             {isExpanded && (
                                                 <motion.div
-                                                    initial={{ opacity: 0, y: 10 }}
+                                                    initial={reducedMotion ? false : { opacity: 0, y: 10 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ duration: 0.25, ease: "easeOut" }}
+                                                    transition={{ duration: reducedMotion ? 0 : 0.25, ease: "easeOut" }}
                                                     className="px-5 pb-5 bg-white space-y-3 border-t border-[#c8dcc8] pt-3"
                                                 >
                                                     {isLoadingDetails ? (
