@@ -56,6 +56,7 @@ export const strings = {
             pinCopiedDescription: "Lobby PIN has been copied to clipboard.",
             errorTitle: "Error",
             errorCopyDescription: "Failed to copy PIN to clipboard. Try again.",
+            hostBadge: "Host",
         },
         questions: {
             newHostTitle: "New host",
@@ -164,6 +165,7 @@ export const strings = {
             pinCopiedDescription: "El PIN del lobby se ha copiado al portapapeles.",
             errorTitle: "Error",
             errorCopyDescription: "No se pudo copiar el PIN al portapapeles. Inténtalo de nuevo.",
+            hostBadge: "Anfitrión",
         },
         questions: {
             newHostTitle: "Nuevo anfitrión",
@@ -272,6 +274,7 @@ export const strings = {
             pinCopiedDescription: "Le code du lobby a été copié dans le presse-papiers.",
             errorTitle: "Erreur",
             errorCopyDescription: "Échec de la copie du code dans le presse-papiers. Réessayez.",
+            hostBadge: "Hôte",
         },
         questions: {
             newHostTitle: "Nouvel hôte",
@@ -380,6 +383,7 @@ export const strings = {
             pinCopiedDescription: "Il PIN della lobby è stato copiato negli appunti.",
             errorTitle: "Errore",
             errorCopyDescription: "Impossibile copiare il PIN negli appunti. Riprova.",
+            hostBadge: "Host",
         },
         questions: {
             newHostTitle: "Nuovo host",
@@ -488,6 +492,7 @@ export const strings = {
             pinCopiedDescription: "O PIN do lobby foi copiado para a área de transferência.",
             errorTitle: "Erro",
             errorCopyDescription: "Falha ao copiar o PIN para a área de transferência. Tente novamente.",
+            hostBadge: "Anfitrião",
         },
         questions: {
             newHostTitle: "Novo anfitrião",
@@ -596,6 +601,7 @@ export const strings = {
             pinCopiedDescription: "PIN лобби скопирован в буфер обмена.",
             errorTitle: "Ошибка",
             errorCopyDescription: "Не удалось скопировать PIN в буфер обмена. Попробуйте снова.",
+            hostBadge: "Хост",
         },
         questions: {
             newHostTitle: "Новый хост",

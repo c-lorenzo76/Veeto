@@ -70,11 +70,26 @@ module.exports = {
           "0%,70%,100%": { opacity: "1" },
           "20%,50%": { opacity: "0" },
         },
+        "cell-ripple": {
+          "0%": {
+            transform: "scale(1)",
+            boxShadow: "none",
+          },
+          "50%": {
+            transform: "scale(1.15)",
+            boxShadow: "0 0 18px 6px rgba(132, 204, 22, 0.28)",
+          },
+          "100%": {
+            transform: "scale(1)",
+            boxShadow: "none",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "caret-blink": "caret-blink 1.25s ease-out infinite",
+        "cell-ripple": "cell-ripple var(--duration) ease-out var(--delay) 1 both",
       },
     },
   },
