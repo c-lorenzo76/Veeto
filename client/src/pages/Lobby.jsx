@@ -4,7 +4,7 @@ import { Footer } from "@/components/Footer";
 import { useSocket } from "@/SocketContext";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"
 import { useLeaveGuard } from "@/hooks/useLeaveGuard";
 import { useStrings } from "@/context/LanguageContext";
@@ -20,6 +20,7 @@ export const Lobby = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const t = useStrings();
+    const reducedMotion = useReducedMotion();
 
     const [users, setUsers] = useState([]);
     const [lobbyCode, setLobbyCode] = useState('');
@@ -213,11 +214,11 @@ export const Lobby = () => {
             </div>
 
             <motion.div
-                initial={{ opacity: 0.0, y: 0 }}
+                initial={reducedMotion ? false : { opacity: 0.0, y: 0 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{
-                    delay: 0.3,
-                    duration: 0.95,
+                    delay: reducedMotion ? 0 : 0.3,
+                    duration: reducedMotion ? 0 : 0.95,
                     ease: "easeInOut",
                 }}
             >
@@ -227,13 +228,18 @@ export const Lobby = () => {
                     </h6>
                     <h1 className="flex items-left text-4xl font-bold text-white tracking-wider">
                         {lobbyCode || t.lobby.loading}
-                        <Copy className={"ml-2 cursor-pointer"}
+                        <button
+                            type="button"
+                            aria-label={t.lobby.copyPinLabel}
+                            className="ml-2 cursor-pointer bg-transparent border-0 p-0 inline-flex items-center"
                             onClick={() => {
                                 if (lobbyCode) {
                                     handleCopyPin();
                                 }
                             }}
-                        />
+                        >
+                            <Copy />
+                        </button>
                     </h1>
                 </div>
             </motion.div>
@@ -327,9 +333,9 @@ export const Lobby = () => {
                                         else cardRefs.current.delete(displayName);
                                     }}
                                     key={displayName + index}
-                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    initial={reducedMotion ? false : { opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ duration: 0.28, delay: index * 0.04 }}
+                                    transition={{ duration: reducedMotion ? 0 : 0.28, delay: reducedMotion ? 0 : index * 0.04 }}
                                     layout
                                 >
                                     <div className="relative rounded-xl">
@@ -344,8 +350,10 @@ export const Lobby = () => {
                                         <div className="relative flex items-center space-x-4 bg-white/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group">
                                             {isHost && userName !== socket?.auth?.token && (
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleKick(displayName)}
-                                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    aria-label={t.lobby.kickPlayerLabel(displayName)}
+                                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                                                 >
                                                     <XCircle className="w-6 h-6 text-white fill-red-500" />
                                                 </button>

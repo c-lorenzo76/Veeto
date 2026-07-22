@@ -30,6 +30,7 @@ export const BackgroundRippleEffect = ({
   return (
     <div
       ref={ref}
+      aria-hidden="true"
       className={cn(
         "absolute inset-0 h-full w-full overflow-hidden",
         "[--cell-border-color:rgba(26,46,26,0.28)] [--cell-fill-color:rgba(26,46,26,0.10)] [--cell-shadow-color:rgba(45,106,45,0.35)]",

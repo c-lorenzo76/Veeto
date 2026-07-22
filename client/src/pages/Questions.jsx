@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Layout } from "./Layout.jsx"
 import { useParams, useNavigate } from "react-router-dom";
 import { Button, Card } from "flowbite-react";
@@ -61,6 +61,7 @@ export const Questions = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
     const t = useStrings();
+    const reducedMotion = useReducedMotion();
 
     useLeaveGuard({ socket, code });
 
@@ -188,9 +189,9 @@ export const Questions = () => {
 
             <motion.div
                 className={"w-full lg:w-[80%] bg-[#f0f7f0] rounded-xl mx-auto p-8 shadow-sm"}
-                initial={{ opacity: 0, y: 10 }}
+                initial={reducedMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.99, ease: "easeOut" }}
+                transition={{ duration: reducedMotion ? 0 : 0.99, ease: "easeOut" }}
             >
                 {poll && (
                     <>

@@ -47,13 +47,19 @@ const AvatarSelection = ({ onSelect }) => {
     return (
         <div className="grid grid-cols-4 gap-8 gap-x-14 py-4 mx-auto">
             {Object.entries(avatars).map(([name, src]) => (
-                <img
+                <button
                     key={name}
-                    alt={name}
-                    src={src}
-                    className="rounded-full h-10 w-10 cursor-pointer"
+                    type="button"
+                    aria-label={`Select ${name} avatar`}
+                    className="rounded-full h-10 w-10 cursor-pointer p-0 border-0 bg-transparent"
                     onClick={() => onSelect(src)}
-                />
+                >
+                    <img
+                        alt={name}
+                        src={src}
+                        className="rounded-full h-10 w-10"
+                    />
+                </button>
             ))}
         </div>
     );

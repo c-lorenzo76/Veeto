@@ -57,6 +57,8 @@ export const strings = {
             errorTitle: "Error",
             errorCopyDescription: "Failed to copy PIN to clipboard. Try again.",
             hostBadge: "Host",
+            copyPinLabel: "Copy room PIN",
+            kickPlayerLabel: (name) => `Kick ${name}`,
         },
         questions: {
             newHostTitle: "New host",
@@ -166,6 +168,8 @@ export const strings = {
             errorTitle: "Error",
             errorCopyDescription: "No se pudo copiar el PIN al portapapeles. Inténtalo de nuevo.",
             hostBadge: "Anfitrión",
+            copyPinLabel: "Copiar PIN de sala",
+            kickPlayerLabel: (name) => `Expulsar a ${name}`,
         },
         questions: {
             newHostTitle: "Nuevo anfitrión",
@@ -275,6 +279,8 @@ export const strings = {
             errorTitle: "Erreur",
             errorCopyDescription: "Échec de la copie du code dans le presse-papiers. Réessayez.",
             hostBadge: "Hôte",
+            copyPinLabel: "Copier le code de la salle",
+            kickPlayerLabel: (name) => `Exclure ${name}`,
         },
         questions: {
             newHostTitle: "Nouvel hôte",
@@ -384,6 +390,8 @@ export const strings = {
             errorTitle: "Errore",
             errorCopyDescription: "Impossibile copiare il PIN negli appunti. Riprova.",
             hostBadge: "Host",
+            copyPinLabel: "Copia PIN della stanza",
+            kickPlayerLabel: (name) => `Espelli ${name}`,
         },
         questions: {
             newHostTitle: "Nuovo host",
@@ -493,6 +501,8 @@ export const strings = {
             errorTitle: "Erro",
             errorCopyDescription: "Falha ao copiar o PIN para a área de transferência. Tente novamente.",
             hostBadge: "Anfitrião",
+            copyPinLabel: "Copiar PIN da sala",
+            kickPlayerLabel: (name) => `Expulsar ${name}`,
         },
         questions: {
             newHostTitle: "Novo anfitrião",
@@ -602,6 +612,8 @@ export const strings = {
             errorTitle: "Ошибка",
             errorCopyDescription: "Не удалось скопировать PIN в буфер обмена. Попробуйте снова.",
             hostBadge: "Хост",
+            copyPinLabel: "Скопировать PIN комнаты",
+            kickPlayerLabel: (name) => `Исключить ${name}`,
         },
         questions: {
             newHostTitle: "Новый хост",
