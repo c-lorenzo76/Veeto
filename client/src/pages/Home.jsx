@@ -38,7 +38,7 @@ export const Home = () => {
                 title: t.home.kickedTitle,
                 description: t.home.kickedDescription,
                 variant: "destructive",
-                duration: 4000,
+                duration: Infinity,
             });
         } else if (location.state?.hostLeft) {
             toast({

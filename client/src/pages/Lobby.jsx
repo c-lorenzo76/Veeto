@@ -1,13 +1,18 @@
 import { Button } from "@/components/ui/button";
-import { Copy, XCircle } from 'lucide-react';
+import { Copy, XCircle, Crown } from 'lucide-react';
 import { Footer } from "@/components/Footer";
 import { useSocket } from "@/SocketContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast"
 import { useLeaveGuard } from "@/hooks/useLeaveGuard";
 import { useStrings } from "@/context/LanguageContext";
+import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
+
+const RIPPLE_ROWS = 8;
+const RIPPLE_COLS = 27;
 
 export const Lobby = () => {
     const { socket } = useSocket();
@@ -19,8 +24,77 @@ export const Lobby = () => {
     const [users, setUsers] = useState([]);
     const [lobbyCode, setLobbyCode] = useState('');
     const [isHost, setIsHost] = useState(false);
+    const [host, setHost] = useState(null);
+    const [rippleTrigger, setRippleTrigger] = useState(0);
+    const [rippleOrigin, setRippleOrigin] = useState(null);
 
     useLeaveGuard({ socket, code, isHost });
+
+    // Tracks each player card's DOM node and its last-known position in the
+    // ripple grid's row/col space, so a join/leave/kick can ripple out from
+    // that specific card instead of always the grid's center.
+    const cardRefs = useRef(new Map());
+    const cardPositionsRef = useRef(new Map());
+    const rippleContainerRef = useRef(null);
+    const prevUserNamesRef = useRef([]);
+
+    const computeCardOrigin = (node) => {
+        const container = rippleContainerRef.current;
+        if (!container || !node) return null;
+        const containerRect = container.getBoundingClientRect();
+        const nodeRect = node.getBoundingClientRect();
+        if (containerRect.width === 0 || containerRect.height === 0) return null;
+
+        const centerX = nodeRect.left + nodeRect.width / 2 - containerRect.left;
+        const centerY = nodeRect.top + nodeRect.height / 2 - containerRect.top;
+        const xFrac = Math.min(1, Math.max(0, centerX / containerRect.width));
+        const yFrac = Math.min(1, Math.max(0, centerY / containerRect.height));
+
+        return {
+            row: Math.min(RIPPLE_ROWS - 1, Math.floor(yFrac * RIPPLE_ROWS)),
+            col: Math.min(RIPPLE_COLS - 1, Math.floor(xFrac * RIPPLE_COLS)),
+        };
+    };
+
+    // Ripple the player-grid background whenever the roster actually
+    // changes (join/kick), not on the initial mount/render. The ripple
+    // originates from the affected player's card position.
+    const isFirstUsersRender = useRef(true);
+    useEffect(() => {
+        const currentNames = users.map((u) => u?.name).filter(Boolean);
+
+        if (isFirstUsersRender.current) {
+            isFirstUsersRender.current = false;
+            prevUserNamesRef.current = currentNames;
+            currentNames.forEach((name) => {
+                const pos = computeCardOrigin(cardRefs.current.get(name));
+                if (pos) cardPositionsRef.current.set(name, pos);
+            });
+            return;
+        }
+
+        const prevNames = prevUserNamesRef.current;
+        const removedNames = prevNames.filter((n) => !currentNames.includes(n));
+        const addedNames = currentNames.filter((n) => !prevNames.includes(n));
+
+        let origin = null;
+        if (removedNames.length > 0) {
+            origin = cardPositionsRef.current.get(removedNames[0]) || null;
+            removedNames.forEach((n) => cardPositionsRef.current.delete(n));
+        } else if (addedNames.length > 0) {
+            origin = computeCardOrigin(cardRefs.current.get(addedNames[0]));
+        }
+
+        // Refresh positions for all currently present cards for next time.
+        currentNames.forEach((name) => {
+            const pos = computeCardOrigin(cardRefs.current.get(name));
+            if (pos) cardPositionsRef.current.set(name, pos);
+        });
+
+        prevUserNamesRef.current = currentNames;
+        setRippleOrigin(origin);
+        setRippleTrigger((n) => n + 1);
+    }, [users]);
 
 
     useEffect(() => {
@@ -34,6 +108,7 @@ export const Lobby = () => {
         socket.on("lobbyInfo", (lobby) => {
             setLobbyCode(lobby.code);
             setUsers(lobby.users);
+            setHost(lobby.host);
         });
 
         socket.on("selfInfo", ({ isHost: hostStatus }) => {
@@ -230,54 +305,82 @@ export const Lobby = () => {
                 </div>
             </div>
 
-            <div className="joined-users flex-grow">
-                <div className="m-8 mx-auto w-[90%] lg:w-[80%]">
-                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ">
+            <div className="joined-users relative flex-grow min-h-[22rem] overflow-hidden" ref={rippleContainerRef}>
+                <BackgroundRippleEffect
+                    rows={RIPPLE_ROWS}
+                    cols={RIPPLE_COLS}
+                    rippleTrigger={rippleTrigger}
+                    rippleOrigin={rippleOrigin}
+                />
+                <div className="relative z-10 m-8 mx-auto w-[90%] lg:w-[80%]">
+                    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                         {users.map((user, index) => {
-                            const displayName = user?.name || t.lobby.playerFallback;
+                            const userName = user?.name;
+                            const displayName = userName || t.lobby.playerFallback;
                             const avatarSrc = user?.avatar || null;
+                            const isPlayerHost = Boolean(userName && userName === host);
 
                             return (
                                 <motion.div
+                                    ref={(el) => {
+                                        if (el) cardRefs.current.set(displayName, el);
+                                        else cardRefs.current.delete(displayName);
+                                    }}
                                     key={displayName + index}
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ duration: 0.28, delay: index * 0.04 }}
                                     layout
                                 >
-                                    <div className="relative flex items-center space-x-4 bg-white/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow group">
-                                        {isHost && displayName !== socket?.auth?.token && (
-                                            <button
-                                                onClick={() => handleKick(displayName)}
-                                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <XCircle className="w-6 h-6 text-white fill-red-500" />
-                                            </button>
-                                        )}
-                                        {avatarSrc ? (
-                                            <img
-                                                src={avatarSrc}
-                                                alt={displayName}
-                                                className="flex-shrink-0 h-14 w-14 rounded-full object-cover bg-gray-100"
-                                                onError={(e) => {
-                                                    // If image fails, hide it and insert a neutral placeholder (no initials)
-                                                    e.currentTarget.style.display = "none";
-                                                    const parent = e.currentTarget.parentElement;
-                                                    if (parent && !parent.querySelector(".avatar-placeholder")) {
-                                                        const placeholder = document.createElement("div");
-                                                        placeholder.className =
-                                                            "avatar-placeholder flex-shrink-0 h-14 w-14 rounded-full bg-gray-300 dark:bg-slate-700";
-                                                        placeholder.setAttribute("aria-hidden", "true");
-                                                        parent.insertBefore(placeholder, e.currentTarget);
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="flex-shrink-0 h-14 w-14 rounded-full bg-gray-300 dark:bg-slate-700" aria-hidden="true" />
-                                        )}
+                                    <div className="relative rounded-xl">
+                                        <GlowingEffect
+                                            disabled={false}
+                                            glow={true}
+                                            proximity={64}
+                                            spread={40}
+                                            inactiveZone={0.01}
+                                            borderWidth={2}
+                                        />
+                                        <div className="relative flex items-center space-x-4 bg-white/80 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group">
+                                            {isHost && userName !== socket?.auth?.token && (
+                                                <button
+                                                    onClick={() => handleKick(displayName)}
+                                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <XCircle className="w-6 h-6 text-white fill-red-500" />
+                                                </button>
+                                            )}
+                                            {avatarSrc ? (
+                                                <img
+                                                    src={avatarSrc}
+                                                    alt={displayName}
+                                                    className="flex-shrink-0 h-14 w-14 rounded-full object-cover bg-gray-100"
+                                                    onError={(e) => {
+                                                        // If image fails, hide it and insert a neutral placeholder (no initials)
+                                                        e.currentTarget.style.display = "none";
+                                                        const parent = e.currentTarget.parentElement;
+                                                        if (parent && !parent.querySelector(".avatar-placeholder")) {
+                                                            const placeholder = document.createElement("div");
+                                                            placeholder.className =
+                                                                "avatar-placeholder flex-shrink-0 h-14 w-14 rounded-full bg-gray-300 dark:bg-slate-700";
+                                                            placeholder.setAttribute("aria-hidden", "true");
+                                                            parent.insertBefore(placeholder, e.currentTarget);
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="flex-shrink-0 h-14 w-14 rounded-full bg-gray-300 dark:bg-slate-700" aria-hidden="true" />
+                                            )}
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-lg font-semibold truncate">{displayName}</div>
+                                            <div className="flex flex-col min-w-0">
+                                                {isPlayerHost && (
+                                                    <span className="inline-flex items-center gap-1 bg-[#1a2e1a] text-[#f0f7f0] text-[10px] font-semibold px-1.5 py-0.5 rounded-full mb-1">
+                                                        <Crown className="w-3 h-3 text-yellow-400" />
+                                                        {t.lobby.hostBadge}
+                                                    </span>
+                                                )}
+                                                <div className="text-lg font-semibold truncate">{displayName}</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
