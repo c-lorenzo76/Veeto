@@ -41,6 +41,8 @@ export const strings = {
             namePlaceholder: "Neo",
             pinLabel: "Pin",
             joinButton: "Join host",
+            errorTitle: "Lobby not found",
+            errorDescription: "The lobby code is invalid or the game has already ended. Check the code and try again.",
         },
         lobby: {
             start: "Start",
@@ -152,6 +154,8 @@ export const strings = {
             namePlaceholder: "Neo",
             pinLabel: "Pin",
             joinButton: "Unirse al anfitrión",
+            errorTitle: "Sala no encontrada",
+            errorDescription: "El código de sala no es válido o la partida ya finalizó. Revisa el código e inténtalo de nuevo.",
         },
         lobby: {
             start: "Comenzar",
@@ -263,6 +267,8 @@ export const strings = {
             namePlaceholder: "Neo",
             pinLabel: "Code",
             joinButton: "Rejoindre l'hôte",
+            errorTitle: "Salle introuvable",
+            errorDescription: "Le code de la salle est invalide ou la partie est déjà terminée. Vérifiez le code et réessayez.",
         },
         lobby: {
             start: "Démarrer",
@@ -374,6 +380,8 @@ export const strings = {
             namePlaceholder: "Neo",
             pinLabel: "Pin",
             joinButton: "Unisciti all'host",
+            errorTitle: "Stanza non trovata",
+            errorDescription: "Il codice della stanza non è valido o la partita è già terminata. Controlla il codice e riprova.",
         },
         lobby: {
             start: "Inizia",
@@ -485,6 +493,8 @@ export const strings = {
             namePlaceholder: "Neo",
             pinLabel: "Pin",
             joinButton: "Entrar no anfitrião",
+            errorTitle: "Sala não encontrada",
+            errorDescription: "O código da sala é inválido ou o jogo já terminou. Verifique o código e tente novamente.",
         },
         lobby: {
             start: "Iniciar",
@@ -596,6 +606,8 @@ export const strings = {
             namePlaceholder: "Нео",
             pinLabel: "Пин-код",
             joinButton: "Присоединиться к хосту",
+            errorTitle: "Лобби не найдено",
+            errorDescription: "Код лобби неверен или игра уже завершена. Проверьте код и попробуйте снова.",
         },
         lobby: {
             start: "Начать",

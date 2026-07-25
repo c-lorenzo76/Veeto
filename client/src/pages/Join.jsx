@@ -33,6 +33,7 @@ import { useSocket } from "@/SocketContext";
 import { useEffect } from "react";
 import { REGEXP_ONLY_DIGITS_AND_CHARS } from "input-otp";
 import { useStrings } from "@/context/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 
 
 export const Join = () => {
@@ -42,6 +43,7 @@ export const Join = () => {
     const navigate = useNavigate();
     const { socket, connectSocket } = useSocket();
     const t = useStrings();
+    const { toast } = useToast();
 
 
     const avatarSelect = (avatar) => {
@@ -53,11 +55,21 @@ export const Join = () => {
         const handleLobbyJoined = () => {
             navigate(`/Lobby/${pin}`);
         };
+        const handleError = () => {
+            toast({
+                title: t.join.errorTitle,
+                description: t.join.errorDescription,
+                variant: "destructive",
+                duration: 4000,
+            });
+        };
         socket.on('lobbyJoined', handleLobbyJoined);
+        socket.on('Error', handleError);
         return () => {
             socket.off('lobbyJoined', handleLobbyJoined);
+            socket.off('Error', handleError);
         }
-    }, [socket, pin, navigate]);
+    }, [socket, pin, navigate, toast, t]);
 
     const handleJoin = () => {
         console.log("name: ", name);
