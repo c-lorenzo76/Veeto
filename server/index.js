@@ -214,7 +214,7 @@ io.on("connection", socket => {
 
     socket.on("joinLobby", withValidation(socket, schemas.joinLobby, ({ lobbyCode }) => {
         const lobbyObj = lobbies[lobbyCode];
-        if (!lobbyObj) return socket.emit('Error', 'Error with joinLobby');
+        if (!lobbyObj) return socket.emit('Error', 'Lobby not found');
 
         socket.join(lobbyCode);
         if (!lobbyObj.users.some(u => u.name === socket.data.user)) {
